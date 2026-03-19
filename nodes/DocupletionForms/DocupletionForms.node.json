@@ -1,0 +1,9 @@
+{
+  "node": "n8n-nodes-docupletionforms.docupletionForms",
+  "codex": {
+    "categories": ["Sales", "Marketing"],
+    "resources": {
+      "primaryDocumentation": [{ "url": "https://docupletionforms.com/automations" }]
+    }
+  }
+}

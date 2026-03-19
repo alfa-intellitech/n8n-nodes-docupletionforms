@@ -1,0 +1,49 @@
+{
+  "name": "n8n-nodes-docupletionforms",
+  "version": "0.1.0",
+  "description": "n8n community node for DocupletionForms — conditional logic forms with automated PDF document generation",
+  "keywords": [
+    "n8n-community-node-package",
+    "docupletionforms",
+    "forms",
+    "pdf",
+    "document-automation"
+  ],
+  "license": "MIT",
+  "homepage": "https://docupletionforms.com",
+  "author": { "name": "Your Name" },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yourname/n8n-nodes-docupletionforms"
+  },
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc && npx copyfiles \"nodes/**/*.svg\" dist/",
+    "dev": "tsc --watch",
+    "dev:docker": "npm run build && docker compose up",
+    "lint": "eslint nodes credentials --ext .ts",
+    "prepublishOnly": "npm run build && npm run lint"
+  },
+  "n8n": {
+    "n8nNodesApiVersion": 1,
+    "credentials": ["dist/credentials/DocupletionFormsApi.credentials.js"],
+    "nodes": [
+      "dist/nodes/DocupletionForms/DocupletionForms.node.js",
+      "dist/nodes/DocupletionForms/DocupletionFormsTrigger.node.js",
+      "dist/nodes/DocupletionForms/DocupletionFormsTool.node.js"
+    ]
+  },
+  "devDependencies": {
+    "@types/node": "^18.0.0",
+    "@typescript-eslint/eslint-plugin": "^6.0.0",
+    "@typescript-eslint/parser": "^6.0.0",
+    "copyfiles": "^2.4.1",
+    "eslint": "^8.0.0",
+    "n8n-core": "*",
+    "typescript": "^5.0.0"
+  },
+  "peerDependencies": {
+    "n8n-workflow": "*"
+  },
+  "files": ["dist"]
+}
