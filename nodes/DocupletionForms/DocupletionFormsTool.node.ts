@@ -4,10 +4,33 @@ import type {
   INodeExecutionData,
   INodeType,
   INodeTypeDescription,
-  INodePropertyOptions,
 } from 'n8n-workflow';
 import { NodeConnectionTypes } from 'n8n-workflow';
-import { docupletionFormsApiRequest } from '../shared/GenericFunctions';
+import { NodeOperationError } from 'n8n-workflow';
+import { docupletionFormsApiRequest, loadDocupletionForms } from '../shared/GenericFunctions';
+
+function pickFields(input: unknown, selectedFields: string[]): unknown {
+  if (!selectedFields.length) return input;
+  if (Array.isArray(input)) return input.map((item) => pickFields(item, selectedFields));
+  if (input && typeof input === 'object') {
+    const record = input as Record<string, unknown>;
+    const filtered: Record<string, unknown> = {};
+    for (const field of selectedFields) {
+      if (record[field] !== undefined) filtered[field] = record[field];
+    }
+    return filtered;
+  }
+  return input;
+}
+
+function simplifyPayload(input: unknown): unknown {
+  if (Array.isArray(input)) return input.map((item) => simplifyPayload(item));
+  if (input && typeof input === 'object') {
+    const entries = Object.entries(input as Record<string, unknown>).slice(0, 10);
+    return Object.fromEntries(entries);
+  }
+  return input;
+}
 
 const TOOL_DESCRIPTIONS: Record<string, string> = {
   saveDraft:
@@ -33,13 +56,6 @@ export class DocupletionFormsTool implements INodeType {
     description:
       'Use DocupletionForms as an AI agent tool — save drafts, prefill forms, retrieve submissions, and trigger document merges.',
     defaults: { name: 'DocupletionForms' },
-    codex: {
-      categories: ['AI'],
-      subcategories: { AI: ['Tools'] },
-      resources: {
-        primaryDocumentation: [{ url: 'https://docupletionforms.com/automations' }],
-      },
-    },
     usableAsTool: true,
     // This node is executed as a tool by the AI Agent ("Tools Agent").
     // `ai_tool` is the special connection type used for structured tool invocation.
@@ -56,7 +72,7 @@ export class DocupletionFormsTool implements INodeType {
           { name: 'Set Manually', value: 'manual' },
         ],
         default: 'auto',
-        description: 'Controls how the AI Agent tool description is generated.',
+        description: 'Controls how the AI Agent tool description is generated',
       },
       {
         displayName: 'Tool Description',
@@ -66,7 +82,39 @@ export class DocupletionFormsTool implements INodeType {
           'Use DocupletionForms as an AI agent tool — save drafts, prefill forms, retrieve submissions, and trigger document merges.',
         typeOptions: { rows: 4 },
         displayOptions: { show: { descriptionType: ['manual'] } },
-        description: 'Shown to the AI Agent to decide when and how to use this tool.',
+        description: 'Shown to the AI Agent to decide when and how to use this tool',
+      },
+      {
+        displayName: 'Output',
+        name: 'outputMode',
+        type: 'options',
+        options: [
+          { name: 'Simplified', value: 'simplified' },
+          { name: 'Raw', value: 'raw' },
+          { name: 'Selected Fields', value: 'selectedFields' },
+        ],
+        default: 'simplified',
+        description:
+          'Whether to return a simplified payload, raw payload, or only selected top-level fields',
+      },
+      {
+        displayName: 'Selected Fields',
+        name: 'selectedFields',
+        type: 'multiOptions',
+        options: [
+          { name: 'Created At', value: 'createdAt' },
+          { name: 'Edit URL', value: 'editUrl' },
+          { name: 'Form ID', value: 'formId' },
+          { name: 'ID', value: 'id' },
+          { name: 'Merged Document URL', value: 'mergedDocumentUrl' },
+          { name: 'Prefill URL', value: 'prefillUrl' },
+          { name: 'Status', value: 'status' },
+          { name: 'Submission ID', value: 'submissionId' },
+          { name: 'Updated At', value: 'updatedAt' },
+        ],
+        default: ['id'],
+        displayOptions: { show: { outputMode: ['selectedFields'] } },
+        description: 'Top-level fields to include in the output',
       },
       {
         displayName: 'Tool',
@@ -105,16 +153,18 @@ export class DocupletionFormsTool implements INodeType {
       },
       // saveDraft params
       {
-        displayName: 'Form',
+        displayName: 'Form Name or ID',
         name: 'formId',
         type: 'options',
+        description:
+          'Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>',
         required: true,
         displayOptions: { show: { tool: ['saveDraft', 'prefillLink', 'listSubmissions'] } },
         typeOptions: { loadOptionsMethod: 'getForms' },
         default: '',
       },
       {
-        displayName: 'Fields (JSON object)',
+        displayName: 'Fields (JSON Object)',
         name: 'fieldsJson',
         type: 'json',
         default: '{}',
@@ -138,7 +188,7 @@ export class DocupletionFormsTool implements INodeType {
       },
       // prefillLink params
       {
-        displayName: 'Prefill Data (JSON object)',
+        displayName: 'Prefill Data (JSON Object)',
         name: 'prefillDataJson',
         type: 'json',
         default: '{}',
@@ -174,7 +224,11 @@ export class DocupletionFormsTool implements INodeType {
         displayName: 'Limit',
         name: 'limit',
         type: 'number',
-        default: 20,
+        typeOptions: {
+          minValue: 1,
+        },
+        description: 'Max number of results to return',
+        default: 50,
         displayOptions: { show: { tool: ['listSubmissions'] } },
       },
       {
@@ -190,25 +244,16 @@ export class DocupletionFormsTool implements INodeType {
 
   methods = {
     loadOptions: {
-      async getForms(this: ILoadOptionsFunctions): Promise<INodePropertyOptions[]> {
-        try {
-          const forms = await docupletionFormsApiRequest.call(this, 'GET', '/forms');
-          if (Array.isArray(forms) && forms.length > 0) {
-            return forms.map((form: { id: string; name: string }) => ({
-              name: form.name,
-              value: form.id,
-            }));
-          }
-        } catch (_) {
-          // ignore
-        }
-        return [{ name: '— No forms found —', value: '' }];
+      async getForms(this: ILoadOptionsFunctions) {
+        return await loadDocupletionForms.call(this);
       },
     },
   };
 
   async execute(this: IExecuteFunctions): Promise<INodeExecutionData[][]> {
     const tool = this.getNodeParameter('tool', 0) as string;
+    const outputMode = this.getNodeParameter('outputMode', 0) as string;
+    const selectedFields = this.getNodeParameter('selectedFields', 0, []) as string[];
     let result: unknown;
 
     try {
@@ -288,13 +333,22 @@ export class DocupletionFormsTool implements INodeType {
           qs,
         );
       } else {
-        result = { error: 'Unknown tool' };
+        throw new NodeOperationError(this.getNode(), `Unsupported tool: ${tool}`);
       }
     } catch (error: unknown) {
-      result = { error: (error as Error).message };
+      if (error instanceof NodeOperationError || error instanceof Error) {
+        throw error;
+      }
+      throw new NodeOperationError(this.getNode(), error as Error);
     }
 
-    const output = typeof result === 'string' ? result : JSON.stringify(result);
+    const shapedResult =
+      outputMode === 'raw'
+        ? result
+        : outputMode === 'selectedFields'
+          ? pickFields(result, selectedFields)
+          : simplifyPayload(result);
+    const output = typeof shapedResult === 'string' ? shapedResult : JSON.stringify(shapedResult);
     return [[{ json: { response: output } }]];
   }
 }

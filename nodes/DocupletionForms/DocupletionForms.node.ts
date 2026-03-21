@@ -4,9 +4,9 @@ import type {
   INodeExecutionData,
   INodeType,
   INodeTypeDescription,
-  INodePropertyOptions,
 } from 'n8n-workflow';
-import { docupletionFormsApiRequest } from '../shared/GenericFunctions';
+import { NodeOperationError } from 'n8n-workflow';
+import { docupletionFormsApiRequest, loadDocupletionForms } from '../shared/GenericFunctions';
 
 export class DocupletionForms implements INodeType {
   description: INodeTypeDescription = {
@@ -41,18 +41,26 @@ export class DocupletionForms implements INodeType {
         noDataExpression: true,
         displayOptions: { show: { resource: ['submission'] } },
         options: [
-          { name: 'Save & Edit Later', value: 'saveForLater' },
-          { name: 'Prefill & Submit Later', value: 'prefillAndSubmitLater' },
+          {
+            name: 'Save & Edit Later',
+            value: 'saveForLater',
+            action: 'Save & edit later a submission',
+          },
+          {
+            name: 'Prefill & Submit Later',
+            value: 'prefillAndSubmitLater',
+            action: 'Prefill & submit later a submission',
+          },
         ],
         default: 'saveForLater',
       },
       {
-        displayName: 'Form',
+        displayName: 'Form Name or ID',
         name: 'formId',
         type: 'options',
         required: true,
         displayOptions: { show: { resource: ['submission'] } },
-        description: 'The form to use',
+        description: 'The form to use. Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>.',
         typeOptions: { loadOptionsMethod: 'getForms' },
         default: '',
       },
@@ -121,7 +129,7 @@ export class DocupletionForms implements INodeType {
             displayName: 'Field',
             values: [
               {
-                displayName: 'Field Name (slug)',
+                displayName: 'Field Name (Slug)',
                 name: 'key',
                 type: 'string',
                 default: '',
@@ -167,19 +175,8 @@ export class DocupletionForms implements INodeType {
 
   methods = {
     loadOptions: {
-      async getForms(this: ILoadOptionsFunctions): Promise<INodePropertyOptions[]> {
-        try {
-          const forms = await docupletionFormsApiRequest.call(this, 'GET', '/forms');
-          if (Array.isArray(forms) && forms.length > 0) {
-            return forms.map((form: { id: string; name: string }) => ({
-              name: form.name,
-              value: form.id,
-            }));
-          }
-        } catch (_) {
-          // ignore
-        }
-        return [{ name: '— No forms found —', value: '' }];
+      async getForms(this: ILoadOptionsFunctions) {
+        return await loadDocupletionForms.call(this);
       },
     },
   };
@@ -249,7 +246,7 @@ export class DocupletionForms implements INodeType {
         if (this.continueOnFail()) {
           returnData.push({ json: { error: (error as Error).message } });
         } else {
-          throw error;
+          throw new NodeOperationError(this.getNode(), error as Error, { itemIndex: i });
         }
       }
     }

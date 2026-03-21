@@ -3,7 +3,7 @@ import type {
   IHookFunctions,
   ILoadOptionsFunctions,
 } from 'n8n-workflow';
-import type { IDataObject, IHttpRequestMethods, JsonObject } from 'n8n-workflow';
+import type { IDataObject, IHttpRequestMethods, INodePropertyOptions, JsonObject } from 'n8n-workflow';
 import { NodeApiError } from 'n8n-workflow';
 
 export async function docupletionFormsApiRequest(
@@ -21,6 +21,7 @@ export async function docupletionFormsApiRequest(
     method,
     headers: {
       Authorization: `Bearer ${credentials.apiKey as string}`,
+      'X-API-Key': credentials.apiKey as string,
       'Content-Type': 'application/json',
     },
     uri,
@@ -50,4 +51,20 @@ export async function docupletionFormsApiRequest(
       description: description ? String(description) : undefined,
     });
   }
+}
+
+export async function loadDocupletionForms(this: ILoadOptionsFunctions): Promise<INodePropertyOptions[]> {
+  try {
+    const forms = await docupletionFormsApiRequest.call(this, 'GET', '/v1/forms');
+    if (Array.isArray(forms) && forms.length > 0) {
+      return forms.map((form: { id: string; name: string }) => ({
+        name: form.name,
+        value: form.id,
+      }));
+    }
+  } catch (_) {
+    // ignore
+  }
+
+  return [{ name: '— No Forms Found —', value: '' }];
 }

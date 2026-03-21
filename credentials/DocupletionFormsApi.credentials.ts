@@ -5,7 +5,8 @@ export class DocupletionFormsApi implements ICredentialType {
 
   displayName = 'DocupletionForms API';
 
-  documentationUrl = 'https://docupletionforms.com/automations';
+  documentationUrl =
+    'https://documenter.getpostman.com/view/620818/SzzobG3R#ddcc3c78-cc33-49a8-af30-20bdd124cdc0';
 
   properties: INodeProperties[] = [
     {

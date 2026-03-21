@@ -4,9 +4,9 @@ import type {
   INodeType,
   INodeTypeDescription,
   IWebhookResponseData,
-  INodePropertyOptions,
 } from 'n8n-workflow';
-import { docupletionFormsApiRequest } from '../shared/GenericFunctions';
+import { NodeOperationError } from 'n8n-workflow';
+import { docupletionFormsApiRequest, loadDocupletionForms } from '../shared/GenericFunctions';
 
 const WEBHOOK_ID_KEY = 'webhookId';
 const WEBHOOK_SECRET_KEY = 'webhookSecret';
@@ -36,12 +36,10 @@ export class DocupletionFormsTrigger implements INodeType {
         default: 'submission.created',
       },
       {
-        displayName: 'Form',
+        displayName: 'Form Name or ID',
         name: 'formId',
         type: 'options',
-        required: false,
-        description:
-          'Optionally filter by a specific form. Leave blank to receive all merged documents.',
+        description: 'Optionally filter by a specific form. Leave blank to receive all merged documents. Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>.',
         typeOptions: { loadOptionsMethod: 'getForms' },
         default: '',
       },
@@ -103,7 +101,7 @@ export class DocupletionFormsTrigger implements INodeType {
           staticData[WEBHOOK_SECRET_KEY] = secret;
           return true;
         }
-        throw new Error('Failed to create webhook: no ID returned');
+        throw new NodeOperationError(this.getNode(), 'Failed to create webhook: no ID returned');
       },
       async delete(this: IHookFunctions): Promise<boolean> {
         const staticData = this.getWorkflowStaticData('node');
@@ -124,19 +122,8 @@ export class DocupletionFormsTrigger implements INodeType {
 
   methods = {
     loadOptions: {
-      async getForms(this: ILoadOptionsFunctions): Promise<INodePropertyOptions[]> {
-        try {
-          const forms = await docupletionFormsApiRequest.call(this, 'GET', '/forms');
-          if (Array.isArray(forms) && forms.length > 0) {
-            return forms.map((form: { id: string; name: string }) => ({
-              name: form.name,
-              value: form.id,
-            }));
-          }
-        } catch (_) {
-          // ignore
-        }
-        return [{ name: '— No forms found —', value: '' }];
+      async getForms(this: ILoadOptionsFunctions) {
+        return await loadDocupletionForms.call(this);
       },
     },
   };

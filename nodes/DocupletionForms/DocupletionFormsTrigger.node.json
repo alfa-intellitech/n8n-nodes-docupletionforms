@@ -1,5 +1,5 @@
 {
-  "node": "n8n-nodes-docupletionforms.docupletionForms",
+  "node": "n8n-nodes-docupletionforms.docupletionFormsTrigger",
   "nodeVersion": "1.0",
   "codexVersion": "1.0",
   "codex": {

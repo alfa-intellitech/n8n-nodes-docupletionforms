@@ -6,7 +6,7 @@ n8n community node for **DocupletionForms** — conditional logic forms with aut
 
 - **DocupletionForms** — Actions: Save & Edit Later, Prefill & Submit Later.
 - **DocupletionForms Trigger** — Webhook triggers: New Form Submitted, New Merged Document.
-- **DocupletionForms Tool** — AI agent tool: save draft, prefill link, get submission, get merged document, list submissions.
+- **DocupletionForms Tool** — AI agent tool: save draft, prefill link, get submission, get merged document, list submissions, with configurable output modes (`Simplified`, `Raw`, `Selected fields`) to control AI context size.
 
 ## Setup
 
@@ -30,6 +30,7 @@ n8n community node for **DocupletionForms** — conditional logic forms with aut
 - **Save & Edit Later:** Use DocupletionForms with operation “Save & Edit Later”, select form and field values, then send the returned `editUrl` to the respondent.
 - **Prefill & Submit Later:** Use DocupletionForms with operation “Prefill & Submit Later”, select form and prefill data, then share the returned `prefillUrl`.
 - **AI Agent:** Connect an AI Agent node to DocupletionForms Tool, then ask the agent to create a draft, get a prefill link, or list submissions using natural language.
+- **AI output control:** In DocupletionForms Tool, set **Output** to `Simplified`, `Raw`, or `Selected fields` depending on how much response data your agent needs.
 
 ## API reference
 

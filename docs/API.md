@@ -2,25 +2,30 @@
 
 This document lists every DocupletionForms API endpoint used by `n8n-nodes-docupletionforms`. Keep it in sync when endpoints or payloads change.
 
+Current implementation note: tool-node output modes (`Simplified`, `Raw`, `Selected fields`) only shape the returned node output and do not change API endpoints or request payloads.
+
 Reference: [DocupletionForms API](https://documenter.getpostman.com/view/620818/SzzobG3R)
 
 ---
 
 ## Authentication
 
-- **Header:** `Authorization: Bearer <API_KEY>`
+- **Header:** `X-API-Key: <API_KEY>`
+- **Also sent for compatibility:** `Authorization: Bearer <API_KEY>`
 - **Content-Type:** `application/json`
+- **Auth check example endpoint:** `GET /v1/me`
 
 ---
 
 ## Endpoints
 
-### GET /forms
+### GET /v1/forms
 
 Returns the list of forms for the authenticated account.
 
 - **Response:** Array of `{ id, name, ... }`
 - **Used by:** Form dropdown (loadOptions) in all nodes
+- **Reference:** [List all forms endpoint](https://documenter.getpostman.com/view/620818/SzzobG3R#ddcc3c78-cc33-49a8-af30-20bdd124cdc0)
 
 ---
 
