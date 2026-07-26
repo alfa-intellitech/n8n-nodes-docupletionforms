@@ -16,7 +16,10 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/docupletionforms/n8n-nodes-docupletionforms.git"
+    "url": "git+https://github.com/alfa-intellitech/docupletion-forms-n8n.git"
+  },
+  "bugs": {
+    "url": "https://github.com/alfa-intellitech/docupletion-forms-n8n/issues"
   },
   "main": "dist/index.js",
   "scripts": {

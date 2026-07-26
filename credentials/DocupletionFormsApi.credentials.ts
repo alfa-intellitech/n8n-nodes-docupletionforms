@@ -1,12 +1,11 @@
-import type { ICredentialType, INodeProperties } from 'n8n-workflow';
+import type { ICredentialTestRequest, ICredentialType, INodeProperties } from 'n8n-workflow';
 
 export class DocupletionFormsApi implements ICredentialType {
   name = 'docupletionFormsApi';
 
   displayName = 'DocupletionForms API';
 
-  documentationUrl =
-    'https://documenter.getpostman.com/view/620818/SzzobG3R#ddcc3c78-cc33-49a8-af30-20bdd124cdc0';
+  documentationUrl = 'https://github.com/alfa-intellitech/docupletion-forms-n8n#readme';
 
   properties: INodeProperties[] = [
     {
@@ -36,4 +35,11 @@ export class DocupletionFormsApi implements ICredentialType {
       description: 'Base URL for the DocupletionForms API (without the /v1/&lt;tenant&gt; suffix)',
     },
   ];
+
+  test: ICredentialTestRequest = {
+    request: {
+      baseURL: '={{$credentials.baseUrl}}',
+      url: '=/v1/{{$credentials.tenantId}}/forms?api_key={{$credentials.apiKey}}',
+    },
+  };
 }
