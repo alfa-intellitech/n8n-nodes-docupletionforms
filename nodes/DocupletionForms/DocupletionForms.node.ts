@@ -6,7 +6,21 @@ import type {
   INodeTypeDescription,
 } from 'n8n-workflow';
 import { NodeOperationError } from 'n8n-workflow';
-import { docupletionFormsApiRequest, loadDocupletionForms } from '../shared/GenericFunctions';
+import {
+  docupletionFormsApiRequest,
+  docupletionFormsApiRequestAllItems,
+  docupletionFormsApiRequestBinary,
+  loadDocupletionDocumentSets,
+  loadDocupletionForms,
+  loadDocupletionTemplates,
+} from '../shared/GenericFunctions';
+
+/** Backend sends `Content-Disposition: inline; filename="foo.pdf"` (see DocumentController::actionDownload's sendFile call). */
+function fileNameFromContentDisposition(headers: Record<string, string>): string | undefined {
+  const header = headers['content-disposition'];
+  const match = header?.match(/filename="?([^";]+)"?/i);
+  return match?.[1];
+}
 
 export class DocupletionForms implements INodeType {
   description: INodeTypeDescription = {
@@ -34,6 +48,7 @@ export class DocupletionForms implements INodeType {
         ],
         default: 'submission',
       },
+      // --- Form Submission ---
       {
         displayName: 'Operation',
         name: 'operation',
@@ -42,14 +57,23 @@ export class DocupletionForms implements INodeType {
         displayOptions: { show: { resource: ['submission'] } },
         options: [
           {
-            name: 'Save & Edit Later',
+            name: 'Submit Form',
             value: 'saveForLater',
-            action: 'Save & edit later a submission',
+            action: 'Submit a form and get a link to edit it later',
+            description:
+              'Creates (or, with an existing submission ID, updates) a submission and returns a link the respondent can use to come back and edit it',
           },
           {
-            name: 'Prefill & Submit Later',
+            name: 'Generate Prefilled Link',
             value: 'prefillAndSubmitLater',
-            action: 'Prefill & submit later a submission',
+            action: 'Generate a prefilled form link',
+            description: 'Builds a URL to the public form with the given fields pre-populated. Nothing is saved until the respondent submits it themselves.',
+          },
+          {
+            name: 'List Submissions',
+            value: 'listSubmissions',
+            action: 'List submissions for a form',
+            description: 'Lists submissions received for a given form, newest first',
           },
         ],
         default: 'saveForLater',
@@ -64,14 +88,13 @@ export class DocupletionForms implements INodeType {
         typeOptions: { loadOptionsMethod: 'getForms' },
         default: '',
       },
-      // --- Save & Edit Later ---
       {
         displayName: 'Field Values',
         name: 'fieldValues',
         type: 'fixedCollection',
         typeOptions: { multipleValues: true },
-        displayOptions: { show: { resource: ['submission'], operation: ['saveForLater'] } },
-        description: 'Pre-populate specific form fields in the draft',
+        displayOptions: { show: { resource: ['submission'], operation: ['saveForLater', 'prefillAndSubmitLater'] } },
+        description: 'Field slug/value pairs to submit or pre-populate, e.g. field_name = John',
         default: {},
         options: [
           {
@@ -79,7 +102,7 @@ export class DocupletionForms implements INodeType {
             displayName: 'Field',
             values: [
               {
-                displayName: 'Field Name',
+                displayName: 'Field Name (Slug)',
                 name: 'key',
                 type: 'string',
                 default: '',
@@ -94,81 +117,117 @@ export class DocupletionForms implements INodeType {
         displayName: 'Additional Options',
         name: 'additionalOptions',
         type: 'collection',
-        displayOptions: { show: { resource: ['submission'], operation: ['saveForLater'] } },
+        displayOptions: { show: { resource: ['submission'], operation: ['saveForLater', 'prefillAndSubmitLater'] } },
         default: {},
         placeholder: 'Add Option',
+        description: 'DocupletionForms has no separate link-expiry setting — sending a notify email is handled server-side by the same submit/prefill call',
         options: [
-          {
-            displayName: 'Expiry (Hours)',
-            name: 'expiryHours',
-            type: 'number',
-            default: 72,
-            description: 'How many hours the draft edit link remains valid',
-          },
           {
             displayName: 'Notify Email',
             name: 'notifyEmail',
             type: 'string',
             default: '',
-            description: 'Email address to send the draft edit link to',
-          },
-        ],
-      },
-      // --- Prefill & Submit Later ---
-      {
-        displayName: 'Prefill Data',
-        name: 'prefillData',
-        type: 'fixedCollection',
-        typeOptions: { multipleValues: true },
-        displayOptions: { show: { resource: ['submission'], operation: ['prefillAndSubmitLater'] } },
-        description: 'Field values to pre-populate when the respondent opens the form',
-        default: {},
-        options: [
-          {
-            name: 'field',
-            displayName: 'Field',
-            values: [
-              {
-                displayName: 'Field Name (Slug)',
-                name: 'key',
-                type: 'string',
-                default: '',
-              },
-              { displayName: 'Value', name: 'value', type: 'string', default: '' },
-            ],
-          },
-        ],
-      },
-      {
-        displayName: 'Additional Options',
-        name: 'additionalOptions',
-        type: 'collection',
-        displayOptions: { show: { resource: ['submission'], operation: ['prefillAndSubmitLater'] } },
-        default: {},
-        placeholder: 'Add Option',
-        options: [
-          {
-            displayName: 'Link Expiry (Hours)',
-            name: 'expiryHours',
-            type: 'number',
-            default: 168,
-            description: 'How many hours the prefilled link remains valid (default 7 days)',
+            description: 'Email address to send a copy of the link to',
           },
           {
-            displayName: 'Lock Prefilled Fields',
-            name: 'lockFields',
-            type: 'boolean',
-            default: false,
-            description: 'Whether to make prefilled fields read-only',
-          },
-          {
-            displayName: 'Redirect URL After Submit',
-            name: 'redirectUrl',
+            displayName: 'Notify Email Subject',
+            name: 'notifyEmailSubject',
             type: 'string',
             default: '',
-            description: 'URL to redirect the respondent to after they submit the form',
+          },
+          {
+            displayName: 'Notify Email Message',
+            name: 'notifyEmailMessage',
+            type: 'string',
+            typeOptions: { rows: 3 },
+            default: '',
           },
         ],
+      },
+      {
+        displayName: 'Return All',
+        name: 'returnAll',
+        type: 'boolean',
+        displayOptions: { show: { resource: ['submission'], operation: ['listSubmissions'] } },
+        default: true,
+        description: 'Whether to return all results or only up to a given limit',
+      },
+      {
+        displayName: 'Limit',
+        name: 'limit',
+        type: 'number',
+        typeOptions: { minValue: 1 },
+        displayOptions: { show: { resource: ['submission'], operation: ['listSubmissions'], returnAll: [false] } },
+        default: 50,
+        description: 'Max number of results to return',
+      },
+      // --- Merged Document ---
+      {
+        displayName: 'Operation',
+        name: 'documentOperation',
+        type: 'options',
+        noDataExpression: true,
+        displayOptions: { show: { resource: ['document'] } },
+        options: [
+          {
+            name: 'List Document Sets',
+            value: 'listDocumentSets',
+            action: 'List document sets for the tenant',
+            description: 'Lists the PDF document sets (template groupings) configured across the tenant\'s forms',
+          },
+          {
+            name: 'List Merged Documents',
+            value: 'listMergedDocuments',
+            action: 'List merged documents for a document set',
+            description: 'Lists every submission that has generated a merged PDF for a given document set, with a download URL per file',
+          },
+          {
+            name: 'Download Merged Document',
+            value: 'downloadMergedDocument',
+            action: 'Download a merged document',
+            description: 'Downloads the merged PDF for a specific document-set/template/submission combination as binary data',
+          },
+        ],
+        default: 'listDocumentSets',
+      },
+      {
+        displayName: 'Document Set Name or ID',
+        name: 'documentSetId',
+        type: 'options',
+        required: true,
+        displayOptions: { show: { resource: ['document'], documentOperation: ['listMergedDocuments', 'downloadMergedDocument'] } },
+        description:
+          'The document set (PDF template grouping) to use. Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>.',
+        typeOptions: { loadOptionsMethod: 'getDocumentSets' },
+        default: '',
+      },
+      {
+        displayName: 'Template Name or ID',
+        name: 'templateId',
+        type: 'options',
+        required: true,
+        displayOptions: { show: { resource: ['document'], documentOperation: ['downloadMergedDocument'] } },
+        description:
+          'The template within the document set to render. Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>.',
+        typeOptions: { loadOptionsMethod: 'getTemplates', loadOptionsDependsOn: ['documentSetId'] },
+        default: '',
+      },
+      {
+        displayName: 'Submission ID',
+        name: 'submissionId',
+        type: 'string',
+        required: true,
+        displayOptions: { show: { resource: ['document'], documentOperation: ['downloadMergedDocument'] } },
+        default: '',
+        description: 'The submission to render — see the "submission_id" field returned by List Merged Documents',
+      },
+      {
+        displayName: 'Put Output File in Field',
+        name: 'binaryPropertyName',
+        type: 'string',
+        displayOptions: { show: { resource: ['document'], documentOperation: ['downloadMergedDocument'] } },
+        default: 'data',
+        description: 'The name of the output binary field to put the downloaded PDF in',
       },
     ],
   };
@@ -178,69 +237,94 @@ export class DocupletionForms implements INodeType {
       async getForms(this: ILoadOptionsFunctions) {
         return await loadDocupletionForms.call(this);
       },
+      async getDocumentSets(this: ILoadOptionsFunctions) {
+        return await loadDocupletionDocumentSets.call(this);
+      },
+      async getTemplates(this: ILoadOptionsFunctions) {
+        return await loadDocupletionTemplates.call(this);
+      },
     },
   };
 
   async execute(this: IExecuteFunctions): Promise<INodeExecutionData[][]> {
     const items = this.getInputData();
     const resource = this.getNodeParameter('resource', 0) as string;
-    const operation = this.getNodeParameter('operation', 0) as string;
     const returnData: INodeExecutionData[] = [];
 
     for (let i = 0; i < items.length; i++) {
       try {
-        if (resource === 'submission' && operation === 'saveForLater') {
+        if (resource === 'submission') {
+          const operation = this.getNodeParameter('operation', i) as string;
           const formId = this.getNodeParameter('formId', i) as string;
+
+          if (operation === 'listSubmissions') {
+            const returnAll = this.getNodeParameter('returnAll', i) as boolean;
+            const allItems = await docupletionFormsApiRequestAllItems.call(this, `/forms/${formId}/submissions`, {}, false);
+            const limitedItems = returnAll
+              ? allItems
+              : allItems.slice(0, this.getNodeParameter('limit', i) as number);
+            for (const entry of limitedItems) returnData.push({ json: entry });
+            continue;
+          }
+
           const fieldValues = this.getNodeParameter('fieldValues', i) as {
             field?: Array<{ key: string; value: string }>;
           };
           const additionalOptions = this.getNodeParameter('additionalOptions', i) as IDataObject;
-          const fields: IDataObject = {};
+
+          // The backend reads the field map directly off the POST body
+          // (no wrapping key) — see FormController::actionSubmit/actionPrefill,
+          // which call Yii::$app->request->post() as the submission data.
+          const body: IDataObject = {};
           if (fieldValues?.field) {
             for (const f of fieldValues.field) {
-              if (f.key) fields[f.key] = f.value;
+              if (f.key) body[f.key] = f.value;
             }
           }
-          const body: IDataObject = {
-            formId,
-            fields,
-            expiryHours: additionalOptions.expiryHours ?? 72,
-          };
           if (additionalOptions.notifyEmail) {
-            body.notifyEmail = additionalOptions.notifyEmail;
+            body.email_address = additionalOptions.notifyEmail;
+            if (additionalOptions.notifyEmailSubject) body.email_subject = additionalOptions.notifyEmailSubject;
+            if (additionalOptions.notifyEmailMessage) body.email_message = additionalOptions.notifyEmailMessage;
           }
-          const result = await docupletionFormsApiRequest.call(this, 'POST', '/submissions/draft', body);
+
+          const endpoint =
+            operation === 'saveForLater' ? `/forms/${formId}/submit` : `/forms/${formId}/prefill`;
+          const result = await docupletionFormsApiRequest.call(this, 'POST', endpoint, body);
           returnData.push({ json: result as IDataObject });
-        } else if (resource === 'submission' && operation === 'prefillAndSubmitLater') {
-          const formId = this.getNodeParameter('formId', i) as string;
-          const prefillData = this.getNodeParameter('prefillData', i) as {
-            field?: Array<{ key: string; value: string }>;
-          };
-          const additionalOptions = this.getNodeParameter('additionalOptions', i) as IDataObject;
-          const prefill: IDataObject = {};
-          if (prefillData?.field) {
-            for (const f of prefillData.field) {
-              if (f.key) prefill[f.key] = f.value;
-            }
+        } else if (resource === 'document') {
+          const documentOperation = this.getNodeParameter('documentOperation', i) as string;
+          if (documentOperation === 'listDocumentSets') {
+            const result = await docupletionFormsApiRequest.call(this, 'GET', '/documents');
+            const list = Array.isArray(result) ? result : [result];
+            for (const entry of list) returnData.push({ json: entry as IDataObject });
+          } else if (documentOperation === 'listMergedDocuments') {
+            const documentSetId = this.getNodeParameter('documentSetId', i) as string;
+            const result = await docupletionFormsApiRequest.call(this, 'GET', '/documents/list', {}, { id: documentSetId });
+            const list = Array.isArray(result) ? result : [result];
+            for (const entry of list) returnData.push({ json: entry as IDataObject });
+          } else if (documentOperation === 'downloadMergedDocument') {
+            const documentSetId = this.getNodeParameter('documentSetId', i) as string;
+            const templateId = this.getNodeParameter('templateId', i) as string;
+            const submissionId = this.getNodeParameter('submissionId', i) as string;
+            const binaryPropertyName = this.getNodeParameter('binaryPropertyName', i) as string;
+
+            const { body, headers } = await docupletionFormsApiRequestBinary.call(this, '/documents/download', {
+              id: documentSetId,
+              template_id: templateId,
+              submission_id: submissionId,
+            });
+            const fileName = fileNameFromContentDisposition(headers) ?? `document-${submissionId}.pdf`;
+            const mimeType = headers['content-type'] ?? 'application/pdf';
+            const binaryData = await this.helpers.prepareBinaryData(body, fileName, mimeType);
+            returnData.push({
+              json: { fileName, mimeType, documentSetId, templateId, submissionId },
+              binary: { [binaryPropertyName]: binaryData },
+            });
+          } else {
+            throw new NodeOperationError(this.getNode(), `Unsupported operation: ${documentOperation}`, { itemIndex: i });
           }
-          const body: IDataObject = {
-            formId,
-            prefillData: prefill,
-            expiryHours: additionalOptions.expiryHours ?? 168,
-            lockFields: additionalOptions.lockFields ?? false,
-          };
-          if (additionalOptions.redirectUrl) {
-            body.redirectUrl = additionalOptions.redirectUrl;
-          }
-          const result = await docupletionFormsApiRequest.call(
-            this,
-            'POST',
-            '/submissions/prefill',
-            body,
-          );
-          returnData.push({ json: result as IDataObject });
         } else {
-          returnData.push({ json: { error: 'Unsupported resource/operation' } });
+          returnData.push({ json: { error: 'Unsupported resource' } });
         }
       } catch (error) {
         if (this.continueOnFail()) {

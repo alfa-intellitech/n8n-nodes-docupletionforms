@@ -6,10 +6,9 @@ import type {
   IWebhookResponseData,
 } from 'n8n-workflow';
 import { NodeOperationError } from 'n8n-workflow';
-import { docupletionFormsApiRequest, loadDocupletionForms } from '../shared/GenericFunctions';
+import { docupletionFormsApiRequest, loadDocupletionDocumentSets } from '../shared/GenericFunctions';
 
 const WEBHOOK_ID_KEY = 'webhookId';
-const WEBHOOK_SECRET_KEY = 'webhookSecret';
 
 export class DocupletionFormsTrigger implements INodeType {
   description: INodeTypeDescription = {
@@ -19,28 +18,20 @@ export class DocupletionFormsTrigger implements INodeType {
     group: ['trigger'],
     version: 1,
     description:
-      'Triggers when a new form is submitted or a new document is merged in DocupletionForms',
+      'Triggers when DocupletionForms merges a submission into a PDF document set',
     defaults: { name: 'DocupletionForms Trigger' },
     inputs: [],
     outputs: ['main'],
     credentials: [{ name: 'docupletionFormsApi', required: true }],
     properties: [
       {
-        displayName: 'Trigger On',
-        name: 'event',
+        displayName: 'Document Set Name or ID',
+        name: 'documentSetId',
         type: 'options',
-        options: [
-          { name: 'New Form Submitted', value: 'submission.created' },
-          { name: 'New Merged Document', value: 'document.merged' },
-        ],
-        default: 'submission.created',
-      },
-      {
-        displayName: 'Form Name or ID',
-        name: 'formId',
-        type: 'options',
-        description: 'Optionally filter by a specific form. Leave blank to receive all merged documents. Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>.',
-        typeOptions: { loadOptionsMethod: 'getForms' },
+        required: true,
+        description:
+          'The document set (PDF template grouping) to watch. DocupletionForms only supports webhooks scoped to a document set — there is no tenant-wide or per-form-only merge event. Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>.',
+        typeOptions: { loadOptionsMethod: 'getDocumentSets' },
         default: '',
       },
       {
@@ -51,18 +42,11 @@ export class DocupletionFormsTrigger implements INodeType {
         default: {},
         options: [
           {
-            displayName: 'Include Merged Document URL',
-            name: 'includeMergedDoc',
-            type: 'boolean',
-            default: false,
-            description: 'Whether to include the URL of the merged PDF document in the output',
-          },
-          {
             displayName: 'Include Submission Data',
             name: 'includeSubmission',
             type: 'boolean',
             default: true,
-            description: 'Whether to include the raw submission fields alongside the document metadata',
+            description: 'Whether to include the raw submission fields (the "submission" object) alongside the document metadata',
           },
         ],
       },
@@ -78,27 +62,19 @@ export class DocupletionFormsTrigger implements INodeType {
       },
       async create(this: IHookFunctions): Promise<boolean> {
         const webhookUrl = this.getNodeWebhookUrl('default');
-        const event = this.getNodeParameter('event', 0) as string;
-        const formId = this.getNodeParameter('formId', 0) as string | undefined;
+        const documentSetId = this.getNodeParameter('documentSetId', 0) as string;
         const staticData = this.getWorkflowStaticData('node');
-        const secret = `n8n-${Date.now()}-${Math.random().toString(36).slice(2)}`;
         const body: IDataObject = {
+          fillable_pdf_id: documentSetId,
           url: webhookUrl,
-          event,
-          secret,
+          // 1 = INFO: send the JSON metadata body only (no file attachment) —
+          // see DocumentWebhookResource/FillablePdfWebhook::content_type.
+          content_type: 1,
         };
-        if (formId) body.formId = formId;
-        const result = await docupletionFormsApiRequest.call(
-          this,
-          'POST',
-          '/webhooks',
-          body as IDataObject,
-        );
-        const res = result as { id?: string; webhookId?: string; data?: { id?: string } };
-        const id = res?.id ?? res?.webhookId ?? res?.data?.id;
-        if (id) {
-          staticData[WEBHOOK_ID_KEY] = id;
-          staticData[WEBHOOK_SECRET_KEY] = secret;
+        const result = await docupletionFormsApiRequest.call(this, 'POST', '/documents/webhooks', body);
+        const res = result as { id?: string | number };
+        if (res?.id !== undefined) {
+          staticData[WEBHOOK_ID_KEY] = res.id;
           return true;
         }
         throw new NodeOperationError(this.getNode(), 'Failed to create webhook: no ID returned');
@@ -107,13 +83,8 @@ export class DocupletionFormsTrigger implements INodeType {
         const staticData = this.getWorkflowStaticData('node');
         const webhookId = staticData[WEBHOOK_ID_KEY] as string | undefined;
         if (webhookId) {
-          await docupletionFormsApiRequest.call(
-            this,
-            'DELETE',
-            `/webhooks/${webhookId}`,
-          );
+          await docupletionFormsApiRequest.call(this, 'DELETE', `/documents/webhooks/${webhookId}`);
           delete staticData[WEBHOOK_ID_KEY];
-          delete staticData[WEBHOOK_SECRET_KEY];
         }
         return true;
       },
@@ -122,8 +93,8 @@ export class DocupletionFormsTrigger implements INodeType {
 
   methods = {
     loadOptions: {
-      async getForms(this: ILoadOptionsFunctions) {
-        return await loadDocupletionForms.call(this);
+      async getDocumentSets(this: ILoadOptionsFunctions) {
+        return await loadDocupletionDocumentSets.call(this);
       },
     },
   };
@@ -132,24 +103,14 @@ export class DocupletionFormsTrigger implements INodeType {
     const req = this.getRequestObject();
     const body = req.body as IDataObject;
     const additionalFields = (this.getNodeParameter('additionalFields', 0) || {}) as IDataObject;
-    const includeMergedDoc = additionalFields.includeMergedDoc as boolean | undefined;
     const includeSubmission = additionalFields.includeSubmission as boolean | undefined;
 
-    // Optional: verify X-DocupletionForms-Signature if secret is stored
-    const staticData = this.getWorkflowStaticData('node');
-    const secret = staticData[WEBHOOK_SECRET_KEY];
-    if (secret && req.headers['x-docupletionforms-signature']) {
-      // Placeholder: implement HMAC verification when API spec is known
-      // const sig = req.headers['x-docupletionforms-signature'] as string;
-      // if (!verifySignature(body, sig, secret)) throw new Error('Invalid signature');
-    }
-
+    // DocupletionForms does not sign or secret-verify webhook deliveries
+    // (see modules/addons/modules/fillable_pdf/Module.php's dispatch code) —
+    // there is nothing to verify here.
     const output: IDataObject = { ...body };
-    if (includeMergedDoc === true && body.mergedDocumentUrl !== undefined) {
-      output.mergedDocumentUrl = body.mergedDocumentUrl;
-    }
-    if (includeSubmission === false && body.submissionData !== undefined) {
-      delete output.submissionData;
+    if (includeSubmission === false && output.submission !== undefined) {
+      delete output.submission;
     }
 
     return Promise.resolve({

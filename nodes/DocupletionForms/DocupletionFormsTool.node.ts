@@ -7,7 +7,11 @@ import type {
 } from 'n8n-workflow';
 import { NodeConnectionTypes } from 'n8n-workflow';
 import { NodeOperationError } from 'n8n-workflow';
-import { docupletionFormsApiRequest, loadDocupletionForms } from '../shared/GenericFunctions';
+import {
+  docupletionFormsApiRequest,
+  loadDocupletionDocumentSets,
+  loadDocupletionForms,
+} from '../shared/GenericFunctions';
 
 function pickFields(input: unknown, selectedFields: string[]): unknown {
   if (!selectedFields.length) return input;
@@ -32,16 +36,34 @@ function simplifyPayload(input: unknown): unknown {
   return input;
 }
 
+function parseJsonParam(value: unknown): IDataObject {
+  if (typeof value === 'string') {
+    try {
+      return JSON.parse(value || '{}') as IDataObject;
+    } catch (_) {
+      return {};
+    }
+  }
+  if (Array.isArray(value)) {
+    // $fromAI(..., 'json', [{}]) uses an array default; take the first element.
+    const first = value[0];
+    return first && typeof first === 'object' && !Array.isArray(first) ? (first as IDataObject) : {};
+  }
+  if (value && typeof value === 'object') return value as IDataObject;
+  return {};
+}
+
 const TOOL_DESCRIPTIONS: Record<string, string> = {
-  saveDraft:
-    'Creates a draft/partial form submission at DocupletionForms with pre-populated field data. Use this when a human needs to review and complete a form later. Returns a direct edit URL.',
+  submitForm:
+    'Submits a DocupletionForms form with the given field data and returns a link the respondent can use to come back and edit their answers later. Use this when a human needs to review/complete a form later.',
   prefillLink:
-    'Generates a pre-filled form URL that can be shared with a person so they can review pre-populated data and submit the form. Returns a shareable link with an optional expiry.',
-  getSubmission: 'Retrieves the full field data for a specific form submission using its submission ID.',
-  getMergedDocument:
-    'Gets the download URL for the merged/generated PDF document associated with a form submission.',
+    'Generates a pre-filled form URL that can be shared with a person so they can review pre-populated data and submit the form themselves. Nothing is saved until they submit it.',
   listSubmissions:
-    'Lists recent form submissions for a specified form. Returns submission IDs, timestamps, and field summaries.',
+    'Lists submissions received for a given form, newest first, including each submission\'s ID and field answers. Use this to check whether/how a form has already been filled out.',
+  listDocumentSets:
+    'Lists the PDF document sets (template groupings) configured across the tenant, each with its ID, name, and the form it belongs to.',
+  listMergedDocuments:
+    'Lists every submission that has generated a merged PDF for a given document set, including a download URL per generated file.',
 };
 
 export class DocupletionFormsTool implements INodeType {
@@ -52,9 +74,9 @@ export class DocupletionFormsTool implements INodeType {
     group: ['transform'],
     version: 1,
     subtitle:
-      '={{$parameter["tool"] === "saveDraft" ? "Save Draft from Docupletion Forms" : $parameter["tool"] === "prefillLink" ? "Prefill Form Link from Docupletion Forms" : $parameter["tool"] === "getSubmission" ? "Get Submission from Docupletion Forms" : $parameter["tool"] === "getMergedDocument" ? "Get Merged Document URL from Docupletion Forms" : $parameter["tool"] === "listSubmissions" ? "List Recent Submissions from Docupletion Forms" : "Docupletion Forms Tool"}}',
+      '={{$parameter["tool"] === "submitForm" ? "Submit Form from Docupletion Forms" : $parameter["tool"] === "prefillLink" ? "Prefill Form Link from Docupletion Forms" : $parameter["tool"] === "listSubmissions" ? "List Submissions from Docupletion Forms" : $parameter["tool"] === "listDocumentSets" ? "List Document Sets from Docupletion Forms" : $parameter["tool"] === "listMergedDocuments" ? "List Merged Documents from Docupletion Forms" : "Docupletion Forms Tool"}}',
     description:
-      'Use DocupletionForms as an AI agent tool — save drafts, prefill forms, retrieve submissions, and trigger document merges.',
+      'Use DocupletionForms as an AI agent tool — submit forms, generate prefill links, look up submissions, and look up merged documents.',
     defaults: { name: 'DocupletionForms' },
     usableAsTool: true,
     // This node is executed as a tool by the AI Agent ("Tools Agent").
@@ -79,7 +101,7 @@ export class DocupletionFormsTool implements INodeType {
         name: 'toolDescription',
         type: 'string',
         default:
-          'Use DocupletionForms as an AI agent tool — save drafts, prefill forms, retrieve submissions, and trigger document merges.',
+          'Use DocupletionForms as an AI agent tool — submit forms, generate prefill links, look up submissions, and look up merged documents.',
         typeOptions: { rows: 4 },
         displayOptions: { show: { descriptionType: ['manual'] } },
         description: 'Shown to the AI Agent to decide when and how to use this tool',
@@ -102,15 +124,16 @@ export class DocupletionFormsTool implements INodeType {
         name: 'selectedFields',
         type: 'multiOptions',
         options: [
-          { name: 'Created At', value: 'createdAt' },
-          { name: 'Edit URL', value: 'editUrl' },
-          { name: 'Form ID', value: 'formId' },
+          { name: 'Action', value: 'action' },
+          { name: 'File Name', value: 'file_name' },
+          { name: 'File URL', value: 'file_url' },
+          { name: 'Form ID', value: 'form_id' },
           { name: 'ID', value: 'id' },
-          { name: 'Merged Document URL', value: 'mergedDocumentUrl' },
-          { name: 'Prefill URL', value: 'prefillUrl' },
-          { name: 'Status', value: 'status' },
-          { name: 'Submission ID', value: 'submissionId' },
-          { name: 'Updated At', value: 'updatedAt' },
+          { name: 'Message', value: 'message' },
+          { name: 'Name', value: 'name' },
+          { name: 'Submission ID', value: 'submission_id' },
+          { name: 'Success', value: 'success' },
+          { name: 'URL', value: 'url' },
         ],
         default: ['id'],
         displayOptions: { show: { outputMode: ['selectedFields'] } },
@@ -122,36 +145,34 @@ export class DocupletionFormsTool implements INodeType {
         type: 'options',
         options: [
           {
-            name: 'Save Draft (Save & Edit Later)',
-            value: 'saveDraft',
-            description: TOOL_DESCRIPTIONS.saveDraft,
+            name: 'Submit Form',
+            value: 'submitForm',
+            description: TOOL_DESCRIPTIONS.submitForm,
           },
           {
-            name: 'Prefill Form Link (Prefill & Submit Later)',
+            name: 'Prefill Form Link',
             value: 'prefillLink',
             description: TOOL_DESCRIPTIONS.prefillLink,
           },
           {
-            name: 'Get Submission',
-            value: 'getSubmission',
-            description: TOOL_DESCRIPTIONS.getSubmission,
-          },
-          {
-            name: 'Get Merged Document URL',
-            value: 'getMergedDocument',
-            description: TOOL_DESCRIPTIONS.getMergedDocument,
-          },
-          {
-            name: 'List Recent Submissions',
+            name: 'List Submissions',
             value: 'listSubmissions',
             description: TOOL_DESCRIPTIONS.listSubmissions,
           },
+          {
+            name: 'List Document Sets',
+            value: 'listDocumentSets',
+            description: TOOL_DESCRIPTIONS.listDocumentSets,
+          },
+          {
+            name: 'List Merged Documents',
+            value: 'listMergedDocuments',
+            description: TOOL_DESCRIPTIONS.listMergedDocuments,
+          },
         ],
-        // Keep this as a real dropdown selection for manual configuration.
-        // In the AI Agent workflow, the AI will provide the operation inputs, while `tool` itself stays fixed.
         default: 'prefillLink',
       },
-      // saveDraft params
+      // submitForm / prefillLink / listSubmissions params
       {
         displayName: 'Form Name or ID',
         name: 'formId',
@@ -159,7 +180,7 @@ export class DocupletionFormsTool implements INodeType {
         description:
           'Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>',
         required: true,
-        displayOptions: { show: { tool: ['saveDraft', 'prefillLink', 'listSubmissions'] } },
+        displayOptions: { show: { tool: ['submitForm', 'prefillLink', 'listSubmissions'] } },
         typeOptions: { loadOptionsMethod: 'getForms' },
         default: '',
       },
@@ -169,7 +190,7 @@ export class DocupletionFormsTool implements INodeType {
         type: 'json',
         default: '{}',
         required: true,
-        displayOptions: { show: { tool: ['saveDraft'] } },
+        displayOptions: { show: { tool: ['submitForm'] } },
         description: 'JSON object of field slugs to values, e.g. {"field_name":"John","field_email":"john@example.com"}',
       },
       {
@@ -177,14 +198,8 @@ export class DocupletionFormsTool implements INodeType {
         name: 'notifyEmail',
         type: 'string',
         default: '',
-        displayOptions: { show: { tool: ['saveDraft'] } },
-      },
-      {
-        displayName: 'Expiry (Hours)',
-        name: 'expiryHours',
-        type: 'number',
-        default: 72,
-        displayOptions: { show: { tool: ['saveDraft'] } },
+        displayOptions: { show: { tool: ['submitForm'] } },
+        description: 'Optional email address to send a copy of the edit link to',
       },
       // prefillLink params
       {
@@ -197,47 +212,25 @@ export class DocupletionFormsTool implements INodeType {
         description: 'JSON object of field slugs to values',
       },
       {
-        displayName: 'Lock Fields',
-        name: 'lockFields',
-        type: 'boolean',
-        default: false,
-        displayOptions: { show: { tool: ['prefillLink'] } },
-      },
-      {
-        displayName: 'Expiry (Hours)',
-        name: 'expiryHours',
-        type: 'number',
-        default: 168,
-        displayOptions: { show: { tool: ['prefillLink'] } },
-      },
-      // getSubmission / getMergedDocument
-      {
-        displayName: 'Submission ID',
-        name: 'submissionId',
-        type: 'string',
-        required: true,
-        displayOptions: { show: { tool: ['getSubmission', 'getMergedDocument'] } },
-        default: '',
-      },
-      // listSubmissions
-      {
         displayName: 'Limit',
-        name: 'limit',
+        name: 'submissionsLimit',
         type: 'number',
-        typeOptions: {
-          minValue: 1,
-        },
-        description: 'Max number of results to return',
-        default: 50,
+        typeOptions: { minValue: 1 },
+        default: 20,
         displayOptions: { show: { tool: ['listSubmissions'] } },
+        description: 'Max number of submissions to return (most recent first)',
       },
+      // listMergedDocuments params
       {
-        displayName: 'Since (ISO 8601)',
-        name: 'since',
-        type: 'string',
+        displayName: 'Document Set Name or ID',
+        name: 'documentSetId',
+        type: 'options',
+        required: true,
+        displayOptions: { show: { tool: ['listMergedDocuments'] } },
+        description:
+          'Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>',
+        typeOptions: { loadOptionsMethod: 'getDocumentSets' },
         default: '',
-        displayOptions: { show: { tool: ['listSubmissions'] } },
-        description: 'Only return submissions after this time',
       },
     ],
   };
@@ -246,6 +239,9 @@ export class DocupletionFormsTool implements INodeType {
     loadOptions: {
       async getForms(this: ILoadOptionsFunctions) {
         return await loadDocupletionForms.call(this);
+      },
+      async getDocumentSets(this: ILoadOptionsFunctions) {
+        return await loadDocupletionDocumentSets.call(this);
       },
     },
   };
@@ -257,81 +253,30 @@ export class DocupletionFormsTool implements INodeType {
     let result: unknown;
 
     try {
-      if (tool === 'saveDraft') {
+      if (tool === 'submitForm') {
         const formId = this.getNodeParameter('formId', 0) as string;
-        let fields: IDataObject = {};
-        const fieldsJsonValue = this.getNodeParameter('fieldsJson', 0) as unknown;
-        if (typeof fieldsJsonValue === 'string') {
-          try {
-            fields = JSON.parse(fieldsJsonValue || '{}') as IDataObject;
-          } catch (_) {
-            fields = {};
-          }
-        } else if (Array.isArray(fieldsJsonValue)) {
-          // $fromAI('fieldsJson', 'json', [{}]) uses an array default; take the first element.
-          const first = fieldsJsonValue[0];
-          fields = first && typeof first === 'object' && !Array.isArray(first) ? (first as IDataObject) : {};
-        } else if (fieldsJsonValue && typeof fieldsJsonValue === 'object') {
-          fields = fieldsJsonValue as IDataObject;
-        }
+        const fields = parseJsonParam(this.getNodeParameter('fieldsJson', 0));
         const notifyEmail = this.getNodeParameter('notifyEmail', 0) as string;
-        const expiryHours = this.getNodeParameter('expiryHours', 0) as number;
-        result = await docupletionFormsApiRequest.call(this, 'POST', '/submissions/draft', {
-          formId,
-          fields,
-          expiryHours: expiryHours || 72,
-          ...(notifyEmail ? { notifyEmail } : {}),
+        // The backend reads the field map directly off the POST body (no
+        // wrapping key) — see FormController::actionSubmit.
+        result = await docupletionFormsApiRequest.call(this, 'POST', `/forms/${formId}/submit`, {
+          ...fields,
+          ...(notifyEmail ? { email_address: notifyEmail } : {}),
         });
       } else if (tool === 'prefillLink') {
         const formId = this.getNodeParameter('formId', 0) as string;
-        let prefillData: IDataObject = {};
-        const prefillDataJsonValue = this.getNodeParameter('prefillDataJson', 0) as unknown;
-        if (typeof prefillDataJsonValue === 'string') {
-          try {
-            prefillData = JSON.parse(prefillDataJsonValue || '{}') as IDataObject;
-          } catch (_) {
-            prefillData = {};
-          }
-        } else if (Array.isArray(prefillDataJsonValue)) {
-          // $fromAI('prefillDataJson', 'json', [{}]) uses an array default; take the first element.
-          const first = prefillDataJsonValue[0];
-          prefillData =
-            first && typeof first === 'object' && !Array.isArray(first) ? (first as IDataObject) : {};
-        } else if (prefillDataJsonValue && typeof prefillDataJsonValue === 'object') {
-          prefillData = prefillDataJsonValue as IDataObject;
-        }
-        const lockFields = this.getNodeParameter('lockFields', 0) as boolean;
-        const expiryHours = this.getNodeParameter('expiryHours', 0) as number;
-        result = await docupletionFormsApiRequest.call(this, 'POST', '/submissions/prefill', {
-          formId,
-          prefillData,
-          lockFields: lockFields ?? false,
-          expiryHours: expiryHours || 168,
-        });
-      } else if (tool === 'getSubmission') {
-        const submissionId = this.getNodeParameter('submissionId', 0) as string;
-        result = await docupletionFormsApiRequest.call(this, 'GET', `/submissions/${submissionId}`);
-      } else if (tool === 'getMergedDocument') {
-        const submissionId = this.getNodeParameter('submissionId', 0) as string;
-        result = await docupletionFormsApiRequest.call(
-          this,
-          'GET',
-          `/submissions/${submissionId}/document`,
-        );
+        const prefillData = parseJsonParam(this.getNodeParameter('prefillDataJson', 0));
+        result = await docupletionFormsApiRequest.call(this, 'POST', `/forms/${formId}/prefill`, prefillData);
       } else if (tool === 'listSubmissions') {
         const formId = this.getNodeParameter('formId', 0) as string;
-        const limit = this.getNodeParameter('limit', 0) as number;
-        const since = this.getNodeParameter('since', 0) as string;
-        const qs: IDataObject = {};
-        if (limit) qs.limit = limit;
-        if (since) qs.since = since;
-        result = await docupletionFormsApiRequest.call(
-          this,
-          'GET',
-          `/forms/${formId}/submissions`,
-          {},
-          qs,
-        );
+        const limit = this.getNodeParameter('submissionsLimit', 0) as number;
+        const submissions = await docupletionFormsApiRequest.call(this, 'GET', `/forms/${formId}/submissions`, {}, {}, false);
+        result = Array.isArray(submissions) ? submissions.slice(0, limit) : submissions;
+      } else if (tool === 'listDocumentSets') {
+        result = await docupletionFormsApiRequest.call(this, 'GET', '/documents');
+      } else if (tool === 'listMergedDocuments') {
+        const documentSetId = this.getNodeParameter('documentSetId', 0) as string;
+        result = await docupletionFormsApiRequest.call(this, 'GET', '/documents/list', {}, { id: documentSetId });
       } else {
         throw new NodeOperationError(this.getNode(), `Unsupported tool: ${tool}`);
       }
