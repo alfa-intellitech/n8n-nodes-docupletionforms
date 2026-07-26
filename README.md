@@ -18,9 +18,17 @@ You need a DocupletionForms account and a user API key to use this node.
    - **Base URL** — defaults to `https://app.docupletionforms.com/api`; only change this if you're pointed at a different DocupletionForms deployment.
 4. Save the credential — n8n tests the connection immediately and confirms it's working before you can use it in a workflow.
 
+![Add Credentials](images/add-credentials.png)
+
 ## Usage
 
 Add a **DocupletionForms** node to a workflow, pick a resource and operation, then pick a form or document set from the searchable list (or paste an ID directly).
+
+![Node parameters](images/node-parameters.png)
+
+Picking a form or document set opens a searchable list pulled live from your DocupletionForms account:
+
+![Choose a form](images/choose-form.png)
 
 **Form Submission**
 - *Submit Form* — submits field values and returns a link the respondent can use to come back and edit their answers later.
@@ -33,6 +41,12 @@ Add a **DocupletionForms** node to a workflow, pick a resource and operation, th
 - *Download Merged Document* — downloads one merged PDF as binary data, ready to attach to an email or upload elsewhere.
 
 There's also a **DocupletionForms Trigger** node, which fires when a submission generates a merged PDF for a chosen document set, and a **DocupletionForms Tool** node for connecting to an AI Agent (submit forms, generate prefill links, and look up submissions/documents using natural language).
+
+Fill in the field values and hit **Execute step** to try it:
+
+![Filled-in node parameters](images/node-parameters-filled.png)
+
+![Execution result](images/execution-result.png)
 
 ### Example workflows
 
