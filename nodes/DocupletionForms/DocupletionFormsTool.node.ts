@@ -68,7 +68,7 @@ const TOOL_DESCRIPTIONS: Record<string, string> = {
 
 export class DocupletionFormsTool implements INodeType {
   description: INodeTypeDescription = {
-    displayName: 'DocupletionForms',
+    displayName: 'DocupletionForms Tool',
     name: 'docupletionFormsTool',
     icon: 'file:docupletionforms.svg',
     group: ['transform'],
@@ -77,7 +77,7 @@ export class DocupletionFormsTool implements INodeType {
       '={{$parameter["tool"] === "submitForm" ? "Submit Form from Docupletion Forms" : $parameter["tool"] === "prefillLink" ? "Prefill Form Link from Docupletion Forms" : $parameter["tool"] === "listSubmissions" ? "List Submissions from Docupletion Forms" : $parameter["tool"] === "listDocumentSets" ? "List Document Sets from Docupletion Forms" : $parameter["tool"] === "listMergedDocuments" ? "List Merged Documents from Docupletion Forms" : "Docupletion Forms Tool"}}',
     description:
       'Use DocupletionForms as an AI agent tool — submit forms, generate prefill links, look up submissions, and look up merged documents.',
-    defaults: { name: 'DocupletionForms' },
+    defaults: { name: 'DocupletionForms Tool' },
     usableAsTool: true,
     // This node is executed as a tool by the AI Agent ("Tools Agent").
     // `ai_tool` is the special connection type used for structured tool invocation.
