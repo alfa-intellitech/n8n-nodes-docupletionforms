@@ -76,13 +76,13 @@ export async function docupletionFormsApiRequest(
   const options = {
     method,
     url,
-    qs: { ...qs, api_key: credentials.apiKey as string },
+    qs,
     body: Object.keys(body).length ? body : undefined,
     json: true,
   };
 
   try {
-    return await this.helpers.httpRequest(options);
+    return await this.helpers.httpRequestWithAuthentication.call(this, 'docupletionFormsApi', options);
   } catch (error: unknown) {
     throw apiError(this.getNode(), error);
   }
@@ -116,14 +116,14 @@ export async function docupletionFormsApiRequestAllItems(
     const options = {
       method: 'GET' as IHttpRequestMethods,
       url,
-      qs: { ...qs, api_key: credentials.apiKey as string, page },
+      qs: { ...qs, page },
       json: true,
       returnFullResponse: true,
     };
 
     let response: { body: unknown; headers: Record<string, string> };
     try {
-      response = await this.helpers.httpRequest(options);
+      response = await this.helpers.httpRequestWithAuthentication.call(this, 'docupletionFormsApi', options);
     } catch (error: unknown) {
       throw apiError(this.getNode(), error);
     }
@@ -161,13 +161,17 @@ export async function docupletionFormsApiRequestBinary(
   const options = {
     method: 'GET' as IHttpRequestMethods,
     url,
-    qs: { ...qs, api_key: credentials.apiKey as string },
+    qs,
     encoding: 'arraybuffer' as const,
     returnFullResponse: true,
   };
 
   try {
-    const response = (await this.helpers.httpRequest(options)) as {
+    const response = (await this.helpers.httpRequestWithAuthentication.call(
+      this,
+      'docupletionFormsApi',
+      options,
+    )) as {
       body: Buffer | ArrayBuffer;
       headers: Record<string, string>;
     };

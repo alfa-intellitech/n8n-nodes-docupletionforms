@@ -1,4 +1,10 @@
-import type { ICredentialTestRequest, ICredentialType, Icon, INodeProperties } from 'n8n-workflow';
+import type {
+  IAuthenticateGeneric,
+  ICredentialTestRequest,
+  ICredentialType,
+  Icon,
+  INodeProperties,
+} from 'n8n-workflow';
 
 export class DocupletionFormsApi implements ICredentialType {
   name = 'docupletionFormsApi';
@@ -38,10 +44,22 @@ export class DocupletionFormsApi implements ICredentialType {
     },
   ];
 
+  // The legacy (non-OAuth) auth method is an `api_key` query parameter —
+  // applied here so every request made via httpRequestWithAuthentication
+  // gets it automatically, merged into the request's other qs params.
+  authenticate: IAuthenticateGeneric = {
+    type: 'generic',
+    properties: {
+      qs: {
+        api_key: '={{$credentials.apiKey}}',
+      },
+    },
+  };
+
   test: ICredentialTestRequest = {
     request: {
       baseURL: '={{$credentials.baseUrl}}',
-      url: '=/v1/{{$credentials.tenantId}}/forms?api_key={{$credentials.apiKey}}',
+      url: '=/v1/{{$credentials.tenantId}}/forms',
     },
   };
 }

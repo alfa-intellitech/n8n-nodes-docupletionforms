@@ -6,7 +6,7 @@ import type {
   INodeType,
   INodeTypeDescription,
 } from 'n8n-workflow';
-import { NodeApiError, NodeConnectionTypes, NodeOperationError } from 'n8n-workflow';
+import { NodeConnectionTypes, NodeOperationError } from 'n8n-workflow';
 import {
   docupletionFormsApiRequest,
   searchDocupletionDocumentSets,
@@ -282,39 +282,35 @@ export class DocupletionFormsTool implements INodeType {
     const selectedFields = this.getNodeParameter('selectedFields', 0, []) as string[];
     let result: unknown;
 
-    try {
-      if (tool === 'submitForm') {
-        const formId = this.getNodeParameter('formId', 0, undefined, { extractValue: true }) as string;
-        const fields = parseJsonParam(this.getNodeParameter('fieldsJson', 0));
-        const notifyEmail = this.getNodeParameter('notifyEmail', 0) as string;
-        // The backend reads the field map directly off the POST body (no
-        // wrapping key) — see FormController::actionSubmit.
-        result = await docupletionFormsApiRequest.call(this, 'POST', `/forms/${formId}/submit`, {
-          ...fields,
-          ...(notifyEmail ? { email_address: notifyEmail } : {}),
-        });
-      } else if (tool === 'prefillLink') {
-        const formId = this.getNodeParameter('formId', 0, undefined, { extractValue: true }) as string;
-        const prefillData = parseJsonParam(this.getNodeParameter('prefillDataJson', 0));
-        result = await docupletionFormsApiRequest.call(this, 'POST', `/forms/${formId}/prefill`, prefillData);
-      } else if (tool === 'listSubmissions') {
-        const formId = this.getNodeParameter('formId', 0, undefined, { extractValue: true }) as string;
-        const limit = this.getNodeParameter('submissionsLimit', 0) as number;
-        const submissions = await docupletionFormsApiRequest.call(this, 'GET', `/forms/${formId}/submissions`, {}, {}, false);
-        result = Array.isArray(submissions) ? submissions.slice(0, limit) : submissions;
-      } else if (tool === 'listDocumentSets') {
-        result = await docupletionFormsApiRequest.call(this, 'GET', '/documents');
-      } else if (tool === 'listMergedDocuments') {
-        const documentSetId = this.getNodeParameter('documentSetId', 0, undefined, { extractValue: true }) as string;
-        result = await docupletionFormsApiRequest.call(this, 'GET', '/documents/list', {}, { id: documentSetId });
-      } else {
-        throw new NodeOperationError(this.getNode(), `Unsupported tool: ${tool}`);
-      }
-    } catch (error: unknown) {
-      if (error instanceof NodeApiError || error instanceof NodeOperationError) {
-        throw error;
-      }
-      throw new NodeOperationError(this.getNode(), error as Error);
+    // Every branch below either calls docupletionFormsApiRequest (which
+    // always throws a well-formed NodeApiError) or throws NodeOperationError
+    // directly, so there's no raw error to catch/rewrap here.
+    if (tool === 'submitForm') {
+      const formId = this.getNodeParameter('formId', 0, undefined, { extractValue: true }) as string;
+      const fields = parseJsonParam(this.getNodeParameter('fieldsJson', 0));
+      const notifyEmail = this.getNodeParameter('notifyEmail', 0) as string;
+      // The backend reads the field map directly off the POST body (no
+      // wrapping key) — see FormController::actionSubmit.
+      result = await docupletionFormsApiRequest.call(this, 'POST', `/forms/${formId}/submit`, {
+        ...fields,
+        ...(notifyEmail ? { email_address: notifyEmail } : {}),
+      });
+    } else if (tool === 'prefillLink') {
+      const formId = this.getNodeParameter('formId', 0, undefined, { extractValue: true }) as string;
+      const prefillData = parseJsonParam(this.getNodeParameter('prefillDataJson', 0));
+      result = await docupletionFormsApiRequest.call(this, 'POST', `/forms/${formId}/prefill`, prefillData);
+    } else if (tool === 'listSubmissions') {
+      const formId = this.getNodeParameter('formId', 0, undefined, { extractValue: true }) as string;
+      const limit = this.getNodeParameter('submissionsLimit', 0) as number;
+      const submissions = await docupletionFormsApiRequest.call(this, 'GET', `/forms/${formId}/submissions`, {}, {}, false);
+      result = Array.isArray(submissions) ? submissions.slice(0, limit) : submissions;
+    } else if (tool === 'listDocumentSets') {
+      result = await docupletionFormsApiRequest.call(this, 'GET', '/documents');
+    } else if (tool === 'listMergedDocuments') {
+      const documentSetId = this.getNodeParameter('documentSetId', 0, undefined, { extractValue: true }) as string;
+      result = await docupletionFormsApiRequest.call(this, 'GET', '/documents/list', {}, { id: documentSetId });
+    } else {
+      throw new NodeOperationError(this.getNode(), `Unsupported tool: ${tool}`);
     }
 
     const shapedResult =
