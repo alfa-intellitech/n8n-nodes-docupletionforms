@@ -1,36 +1,55 @@
-# n8n-nodes-docupletionforms
+# DocupletionForms N8N Nodes
 
 n8n community node for **DocupletionForms** — conditional logic forms with automated PDF document generation.
 
 ## Nodes
 
-- **DocupletionForms** — Actions: Save & Edit Later, Prefill & Submit Later.
-- **DocupletionForms Trigger** — Webhook triggers: New Form Submitted, New Merged Document.
-- **DocupletionForms Tool** — AI agent tool: save draft, prefill link, get submission, get merged document, list submissions, with configurable output modes (`Simplified`, `Raw`, `Selected fields`) to control AI context size.
+- **DocupletionForms** — two resources:
+  - *Form Submission*: Submit Form, Generate Prefilled Link, List Submissions
+  - *Merged Document*: List Document Sets, List Merged Documents, Download Merged Document (binary PDF)
+- **DocupletionForms Trigger** — webhook that fires when a submission generates a merged PDF for a chosen document set. (There is no separate "new form submitted" event on the backend — merging is the only webhook-backed event.)
+- **DocupletionForms Tool** — AI agent tool: Submit Form, Prefill Form Link, List Submissions, List Document Sets, List Merged Documents, with configurable output modes (`Simplified`, `Raw`, `Selected Fields`) to control AI context size. (Download Merged Document is main-node only — the Tool node's output is text/JSON, and a PDF is binary.)
+
+See [docs/API.md](docs/API.md) for exactly which backend endpoint each operation calls.
 
 ## Setup
 
 1. Install the package in your n8n instance (or use as a custom extension).
-2. Add a **DocupletionForms API** credential with your **API Key** and **Base URL** (default: `https://app.docupletionforms.com/api`).
+2. Add a **DocupletionForms API** credential with:
+   - **API Key** — a DocupletionForms user access token.
+   - **Tenant ID** — the numeric organization/tenant ID that key belongs to (every API route is tenant-scoped; find it in the app URL or on the Manage Account page).
+   - **Base URL** — default `https://app.docupletionforms.com/api`.
 3. Use any of the three nodes in your workflows.
 
 ## Development (Docker)
 
-1. Clone and install: `npm install`
-2. Build: `npm run build`
-3. Start n8n with the node loaded: `npm run dev:docker` (or `docker compose up` after building).
-4. Open http://localhost:5678 and confirm **DocupletionForms**, **DocupletionForms Trigger**, and **DocupletionForms Tool** appear in the node list.
-5. For **webhook trigger** testing, DocupletionForms must be able to POST to your n8n instance. If n8n runs only on localhost, use a tunnel (e.g. [ngrok](https://ngrok.com)) and set the webhook base URL (e.g. `WEBHOOK_URL` or `N8N_HOST`) so the registered webhook URL is the public tunnel URL.
-6. Optional: set `N8N_LOG_LEVEL=debug` in `docker-compose.yml` if nodes do not show up.
-7. After code changes, run `npm run build` then `docker compose restart n8n`.
+There is no bundled `docker-compose.yml` for this package — `npm run dev:docker` in `package.json` assumes one and won't work as-is. To run against a local DocupletionForms backend:
+
+1. Build: `npm install && npm run build`
+2. Start the DocupletionForms backend locally (see that repo's `docker-compose.yml` — it runs `docupletionforms-app`, `docupletionforms-db`, and `docupletionforms-stirling-pdf`, the last of which the Download Merged Document operation depends on).
+3. Run n8n on the same Docker network as the backend, with this package's `dist/` mounted as a custom extension:
+   ```
+   docker run -d --name n8n-dev \
+     --network <docupletionforms-backend-compose-project>_default \
+     -p 5678:5678 \
+     -e N8N_CUSTOM_EXTENSIONS=/custom \
+     -v $(pwd)/dist:/custom:ro \
+     n8nio/n8n:latest
+   ```
+4. Open http://localhost:5678, complete the one-time owner setup, and confirm **DocupletionForms**, **DocupletionForms Trigger**, and **DocupletionForms Tool** appear in the node list.
+5. Point the credential's **Base URL** at the backend container's in-network address (e.g. `http://docupletionforms-app/api`, port 80 — not the host-mapped `localhost:8080`), since n8n is reaching it over the Docker network, not localhost.
+6. For **webhook trigger** testing, DocupletionForms must be able to POST to your n8n instance. If n8n runs only on localhost, use a tunnel (e.g. [ngrok](https://ngrok.com)) and set `WEBHOOK_URL`/`N8N_HOST` so the registered webhook URL is the public tunnel URL.
+7. After code changes: `npm run build`, then `docker restart n8n-dev` (custom extensions are loaded at startup, not hot-reloaded).
 
 ## Example workflows
 
-- **Trigger on new submission:** Add DocupletionForms Trigger (event: New Form Submitted), choose a form, then process the payload in the next nodes.
-- **Save & Edit Later:** Use DocupletionForms with operation “Save & Edit Later”, select form and field values, then send the returned `editUrl` to the respondent.
-- **Prefill & Submit Later:** Use DocupletionForms with operation “Prefill & Submit Later”, select form and prefill data, then share the returned `prefillUrl`.
-- **AI Agent:** Connect an AI Agent node to DocupletionForms Tool, then ask the agent to create a draft, get a prefill link, or list submissions using natural language.
-- **AI output control:** In DocupletionForms Tool, set **Output** to `Simplified`, `Raw`, or `Selected fields` depending on how much response data your agent needs.
+- **Submit Form:** DocupletionForms → Form Submission → Submit Form, select a form and field values, then use the returned `url` (the edit link) — not `editUrl`.
+- **Generate Prefilled Link:** DocupletionForms → Form Submission → Generate Prefilled Link, select a form and prefill data, then share the returned `url` — not `prefillUrl`.
+- **Sync submissions to a spreadsheet/CRM:** DocupletionForms → Form Submission → List Submissions, with "Return All" on, feeding into whatever downstream node writes the data out.
+- **Deliver a generated document:** List Merged Documents (to find a submission's `template_id`) → Download Merged Document (same document set, that `template_id` + `submission_id`) → attach the resulting binary to an email/Slack message.
+- **Trigger on merged document:** DocupletionForms Trigger, pick a document set, then process the delivered `file_url`/`submission` payload in the next nodes.
+- **AI Agent:** Connect an AI Agent node to DocupletionForms Tool, then ask the agent to submit a form, get a prefill link, or list submissions/document sets using natural language.
+- **AI output control:** In DocupletionForms Tool, set **Output** to `Simplified`, `Raw`, or `Selected Fields` depending on how much response data your agent needs.
 
 ## API reference
 
