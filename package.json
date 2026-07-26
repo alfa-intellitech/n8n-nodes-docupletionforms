@@ -16,10 +16,10 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/alfa-intellitech/docupletion-forms-n8n.git"
+    "url": "git+https://github.com/alfa-intellitech/n8n-nodes-docupletionforms.git"
   },
   "bugs": {
-    "url": "https://github.com/alfa-intellitech/docupletion-forms-n8n/issues"
+    "url": "https://github.com/alfa-intellitech/n8n-nodes-docupletionforms/issues"
   },
   "main": "dist/index.js",
   "scripts": {
@@ -28,7 +28,8 @@
     "dev:docker": "npm run build && docker compose up",
     "lint": "eslint \"nodes/**/*.ts\" \"credentials/**/*.ts\"",
     "lintfix": "eslint \"nodes/**/*.ts\" \"credentials/**/*.ts\" --fix",
-    "prepublishOnly": "npm run build && npm run lint"
+    "prepublishOnly": "npm run build && npm run lint",
+    "release": "npm run build && npm run lint && npm publish --provenance --access public"
   },
   "n8n": {
     "n8nNodesApiVersion": 1,

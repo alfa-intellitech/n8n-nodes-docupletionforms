@@ -1,12 +1,13 @@
 import type { IHookFunctions, ILoadOptionsFunctions, IWebhookFunctions } from 'n8n-workflow';
 import type {
   IDataObject,
+  INodeListSearchResult,
   INodeType,
   INodeTypeDescription,
   IWebhookResponseData,
 } from 'n8n-workflow';
 import { NodeOperationError } from 'n8n-workflow';
-import { docupletionFormsApiRequest, loadDocupletionDocumentSets } from '../shared/GenericFunctions';
+import { docupletionFormsApiRequest, searchDocupletionDocumentSets } from '../shared/GenericFunctions';
 
 const WEBHOOK_ID_KEY = 'webhookId';
 
@@ -25,14 +26,30 @@ export class DocupletionFormsTrigger implements INodeType {
     credentials: [{ name: 'docupletionFormsApi', required: true }],
     properties: [
       {
-        displayName: 'Document Set Name or ID',
+        displayName: 'Document Set',
         name: 'documentSetId',
-        type: 'options',
+        type: 'resourceLocator',
         required: true,
         description:
-          'The document set (PDF template grouping) to watch. DocupletionForms only supports webhooks scoped to a document set — there is no tenant-wide or per-form-only merge event. Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>.',
-        typeOptions: { loadOptionsMethod: 'getDocumentSets' },
-        default: '',
+          'The document set (PDF template grouping) to watch. DocupletionForms only supports webhooks scoped to a document set — there is no tenant-wide or per-form-only merge event.',
+        default: { mode: 'list', value: '' },
+        modes: [
+          {
+            displayName: 'From List',
+            name: 'list',
+            type: 'list',
+            typeOptions: { searchListMethod: 'searchDocumentSets', searchable: true },
+          },
+          {
+            displayName: 'ID',
+            name: 'id',
+            type: 'string',
+            placeholder: 'e.g. 12345',
+            validation: [
+              { type: 'regex', properties: { regex: '^[0-9]+$', errorMessage: 'Not a valid Document Set ID' } },
+            ],
+          },
+        ],
       },
       {
         displayName: 'Additional Fields',
@@ -62,7 +79,7 @@ export class DocupletionFormsTrigger implements INodeType {
       },
       async create(this: IHookFunctions): Promise<boolean> {
         const webhookUrl = this.getNodeWebhookUrl('default');
-        const documentSetId = this.getNodeParameter('documentSetId', 0) as string;
+        const documentSetId = this.getNodeParameter('documentSetId', undefined, { extractValue: true }) as string;
         const staticData = this.getWorkflowStaticData('node');
         const body: IDataObject = {
           fillable_pdf_id: documentSetId,
@@ -92,9 +109,9 @@ export class DocupletionFormsTrigger implements INodeType {
   };
 
   methods = {
-    loadOptions: {
-      async getDocumentSets(this: ILoadOptionsFunctions) {
-        return await loadDocupletionDocumentSets.call(this);
+    listSearch: {
+      async searchDocumentSets(this: ILoadOptionsFunctions, filter?: string): Promise<INodeListSearchResult> {
+        return await searchDocupletionDocumentSets.call(this, filter);
       },
     },
   };

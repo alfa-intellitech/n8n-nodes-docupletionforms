@@ -2,6 +2,7 @@ import type { IExecuteFunctions, ILoadOptionsFunctions } from 'n8n-workflow';
 import type {
   IDataObject,
   INodeExecutionData,
+  INodeListSearchResult,
   INodeType,
   INodeTypeDescription,
 } from 'n8n-workflow';
@@ -9,8 +10,8 @@ import { NodeConnectionTypes } from 'n8n-workflow';
 import { NodeOperationError } from 'n8n-workflow';
 import {
   docupletionFormsApiRequest,
-  loadDocupletionDocumentSets,
-  loadDocupletionForms,
+  searchDocupletionDocumentSets,
+  searchDocupletionForms,
 } from '../shared/GenericFunctions';
 
 function pickFields(input: unknown, selectedFields: string[]): unknown {
@@ -174,15 +175,30 @@ export class DocupletionFormsTool implements INodeType {
       },
       // submitForm / prefillLink / listSubmissions params
       {
-        displayName: 'Form Name or ID',
+        displayName: 'Form',
         name: 'formId',
-        type: 'options',
-        description:
-          'Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>',
+        type: 'resourceLocator',
+        description: 'The form to use',
         required: true,
         displayOptions: { show: { tool: ['submitForm', 'prefillLink', 'listSubmissions'] } },
-        typeOptions: { loadOptionsMethod: 'getForms' },
-        default: '',
+        default: { mode: 'list', value: '' },
+        modes: [
+          {
+            displayName: 'From List',
+            name: 'list',
+            type: 'list',
+            typeOptions: { searchListMethod: 'searchForms', searchable: true },
+          },
+          {
+            displayName: 'ID',
+            name: 'id',
+            type: 'string',
+            placeholder: 'e.g. 12345',
+            validation: [
+              { type: 'regex', properties: { regex: '^[0-9]+$', errorMessage: 'Not a valid Form ID' } },
+            ],
+          },
+        ],
       },
       {
         displayName: 'Fields (JSON Object)',
@@ -222,26 +238,41 @@ export class DocupletionFormsTool implements INodeType {
       },
       // listMergedDocuments params
       {
-        displayName: 'Document Set Name or ID',
+        displayName: 'Document Set',
         name: 'documentSetId',
-        type: 'options',
+        type: 'resourceLocator',
         required: true,
         displayOptions: { show: { tool: ['listMergedDocuments'] } },
-        description:
-          'Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>',
-        typeOptions: { loadOptionsMethod: 'getDocumentSets' },
-        default: '',
+        description: 'The document set (PDF template grouping) to use',
+        default: { mode: 'list', value: '' },
+        modes: [
+          {
+            displayName: 'From List',
+            name: 'list',
+            type: 'list',
+            typeOptions: { searchListMethod: 'searchDocumentSets', searchable: true },
+          },
+          {
+            displayName: 'ID',
+            name: 'id',
+            type: 'string',
+            placeholder: 'e.g. 12345',
+            validation: [
+              { type: 'regex', properties: { regex: '^[0-9]+$', errorMessage: 'Not a valid Document Set ID' } },
+            ],
+          },
+        ],
       },
     ],
   };
 
   methods = {
-    loadOptions: {
-      async getForms(this: ILoadOptionsFunctions) {
-        return await loadDocupletionForms.call(this);
+    listSearch: {
+      async searchForms(this: ILoadOptionsFunctions, filter?: string): Promise<INodeListSearchResult> {
+        return await searchDocupletionForms.call(this, filter);
       },
-      async getDocumentSets(this: ILoadOptionsFunctions) {
-        return await loadDocupletionDocumentSets.call(this);
+      async searchDocumentSets(this: ILoadOptionsFunctions, filter?: string): Promise<INodeListSearchResult> {
+        return await searchDocupletionDocumentSets.call(this, filter);
       },
     },
   };
@@ -254,7 +285,7 @@ export class DocupletionFormsTool implements INodeType {
 
     try {
       if (tool === 'submitForm') {
-        const formId = this.getNodeParameter('formId', 0) as string;
+        const formId = this.getNodeParameter('formId', 0, undefined, { extractValue: true }) as string;
         const fields = parseJsonParam(this.getNodeParameter('fieldsJson', 0));
         const notifyEmail = this.getNodeParameter('notifyEmail', 0) as string;
         // The backend reads the field map directly off the POST body (no
@@ -264,18 +295,18 @@ export class DocupletionFormsTool implements INodeType {
           ...(notifyEmail ? { email_address: notifyEmail } : {}),
         });
       } else if (tool === 'prefillLink') {
-        const formId = this.getNodeParameter('formId', 0) as string;
+        const formId = this.getNodeParameter('formId', 0, undefined, { extractValue: true }) as string;
         const prefillData = parseJsonParam(this.getNodeParameter('prefillDataJson', 0));
         result = await docupletionFormsApiRequest.call(this, 'POST', `/forms/${formId}/prefill`, prefillData);
       } else if (tool === 'listSubmissions') {
-        const formId = this.getNodeParameter('formId', 0) as string;
+        const formId = this.getNodeParameter('formId', 0, undefined, { extractValue: true }) as string;
         const limit = this.getNodeParameter('submissionsLimit', 0) as number;
         const submissions = await docupletionFormsApiRequest.call(this, 'GET', `/forms/${formId}/submissions`, {}, {}, false);
         result = Array.isArray(submissions) ? submissions.slice(0, limit) : submissions;
       } else if (tool === 'listDocumentSets') {
         result = await docupletionFormsApiRequest.call(this, 'GET', '/documents');
       } else if (tool === 'listMergedDocuments') {
-        const documentSetId = this.getNodeParameter('documentSetId', 0) as string;
+        const documentSetId = this.getNodeParameter('documentSetId', 0, undefined, { extractValue: true }) as string;
         result = await docupletionFormsApiRequest.call(this, 'GET', '/documents/list', {}, { id: documentSetId });
       } else {
         throw new NodeOperationError(this.getNode(), `Unsupported tool: ${tool}`);

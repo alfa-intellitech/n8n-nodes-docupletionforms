@@ -2,6 +2,7 @@ import type { IExecuteFunctions, ILoadOptionsFunctions } from 'n8n-workflow';
 import type {
   IDataObject,
   INodeExecutionData,
+  INodeListSearchResult,
   INodeType,
   INodeTypeDescription,
 } from 'n8n-workflow';
@@ -10,9 +11,9 @@ import {
   docupletionFormsApiRequest,
   docupletionFormsApiRequestAllItems,
   docupletionFormsApiRequestBinary,
-  loadDocupletionDocumentSets,
-  loadDocupletionForms,
-  loadDocupletionTemplates,
+  searchDocupletionDocumentSets,
+  searchDocupletionForms,
+  searchDocupletionTemplates,
 } from '../shared/GenericFunctions';
 
 /** Backend sends `Content-Disposition: inline; filename="foo.pdf"` (see DocumentController::actionDownload's sendFile call). */
@@ -22,6 +23,18 @@ function fileNameFromContentDisposition(headers: Record<string, string>): string
   return match?.[1];
 }
 
+/** Simplified field set for List Submissions — most-useful-first, under the 10-field UX guideline threshold. */
+function simplifySubmission(item: IDataObject): IDataObject {
+  const { id, form_id, number, status, created_at, updated_at, answers } = item;
+  return { id, form_id, number, status, created_at, updated_at, answers };
+}
+
+/** Simplified field set for List Merged Documents — drops tenant_id and the bulky nested submission object. */
+function simplifyMergedDocument(item: IDataObject): IDataObject {
+  const { id, name, form_id, submission_id, template_id, file_url, file_name, file_mimetype, file_size } = item;
+  return { id, name, form_id, submission_id, template_id, file_url, file_name, file_mimetype, file_size };
+}
+
 export class DocupletionForms implements INodeType {
   description: INodeTypeDescription = {
     displayName: 'DocupletionForms',
@@ -29,7 +42,8 @@ export class DocupletionForms implements INodeType {
     icon: 'file:docupletionforms.svg',
     group: ['transform'],
     version: 1,
-    subtitle: '={{$parameter["operation"] + ": " + $parameter["resource"]}}',
+    subtitle:
+      '={{($parameter["resource"] === "document" ? $parameter["documentOperation"] : $parameter["operation"]) + ": " + $parameter["resource"]}}',
     description:
       'Interact with DocupletionForms — conditional logic forms with automated PDF document generation.',
     defaults: { name: 'DocupletionForms' },
@@ -79,14 +93,30 @@ export class DocupletionForms implements INodeType {
         default: 'saveForLater',
       },
       {
-        displayName: 'Form Name or ID',
+        displayName: 'Form',
         name: 'formId',
-        type: 'options',
+        type: 'resourceLocator',
         required: true,
         displayOptions: { show: { resource: ['submission'] } },
-        description: 'The form to use. Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>.',
-        typeOptions: { loadOptionsMethod: 'getForms' },
-        default: '',
+        description: 'The form to use',
+        default: { mode: 'list', value: '' },
+        modes: [
+          {
+            displayName: 'From List',
+            name: 'list',
+            type: 'list',
+            typeOptions: { searchListMethod: 'searchForms', searchable: true },
+          },
+          {
+            displayName: 'ID',
+            name: 'id',
+            type: 'string',
+            placeholder: 'e.g. 12345',
+            validation: [
+              { type: 'regex', properties: { regex: '^[0-9]+$', errorMessage: 'Not a valid Form ID' } },
+            ],
+          },
+        ],
       },
       {
         displayName: 'Field Values',
@@ -161,6 +191,14 @@ export class DocupletionForms implements INodeType {
         default: 50,
         description: 'Max number of results to return',
       },
+      {
+        displayName: 'Simplify',
+        name: 'simplify',
+        type: 'boolean',
+        displayOptions: { show: { resource: ['submission'], operation: ['listSubmissions'] } },
+        default: true,
+        description: 'Whether to return a simplified version of the response instead of the raw data',
+      },
       // --- Merged Document ---
       {
         displayName: 'Operation',
@@ -191,26 +229,64 @@ export class DocupletionForms implements INodeType {
         default: 'listDocumentSets',
       },
       {
-        displayName: 'Document Set Name or ID',
+        displayName: 'Document Set',
         name: 'documentSetId',
-        type: 'options',
+        type: 'resourceLocator',
         required: true,
         displayOptions: { show: { resource: ['document'], documentOperation: ['listMergedDocuments', 'downloadMergedDocument'] } },
-        description:
-          'The document set (PDF template grouping) to use. Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>.',
-        typeOptions: { loadOptionsMethod: 'getDocumentSets' },
-        default: '',
+        description: 'The document set (PDF template grouping) to use',
+        default: { mode: 'list', value: '' },
+        modes: [
+          {
+            displayName: 'From List',
+            name: 'list',
+            type: 'list',
+            typeOptions: { searchListMethod: 'searchDocumentSets', searchable: true },
+          },
+          {
+            displayName: 'ID',
+            name: 'id',
+            type: 'string',
+            placeholder: 'e.g. 12345',
+            validation: [
+              { type: 'regex', properties: { regex: '^[0-9]+$', errorMessage: 'Not a valid Document Set ID' } },
+            ],
+          },
+        ],
       },
       {
-        displayName: 'Template Name or ID',
+        displayName: 'Simplify',
+        name: 'simplify',
+        type: 'boolean',
+        displayOptions: { show: { resource: ['document'], documentOperation: ['listMergedDocuments'] } },
+        default: true,
+        description: 'Whether to return a simplified version of the response instead of the raw data',
+      },
+      {
+        displayName: 'Template',
         name: 'templateId',
-        type: 'options',
+        type: 'resourceLocator',
         required: true,
         displayOptions: { show: { resource: ['document'], documentOperation: ['downloadMergedDocument'] } },
-        description:
-          'The template within the document set to render. Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>.',
-        typeOptions: { loadOptionsMethod: 'getTemplates', loadOptionsDependsOn: ['documentSetId'] },
-        default: '',
+        description: 'The template within the document set to render',
+        default: { mode: 'list', value: '' },
+        modes: [
+          {
+            displayName: 'From List',
+            name: 'list',
+            type: 'list',
+            typeOptions: { searchListMethod: 'searchTemplates', searchable: true },
+          },
+          {
+            displayName: 'ID',
+            name: 'id',
+            type: 'string',
+            placeholder: 'e.g. 12345',
+            validation: [
+              { type: 'regex', properties: { regex: '^[0-9]+$', errorMessage: 'Not a valid Template ID' } },
+            ],
+          },
+        ],
       },
       {
         displayName: 'Submission ID',
@@ -233,15 +309,15 @@ export class DocupletionForms implements INodeType {
   };
 
   methods = {
-    loadOptions: {
-      async getForms(this: ILoadOptionsFunctions) {
-        return await loadDocupletionForms.call(this);
+    listSearch: {
+      async searchForms(this: ILoadOptionsFunctions, filter?: string): Promise<INodeListSearchResult> {
+        return await searchDocupletionForms.call(this, filter);
       },
-      async getDocumentSets(this: ILoadOptionsFunctions) {
-        return await loadDocupletionDocumentSets.call(this);
+      async searchDocumentSets(this: ILoadOptionsFunctions, filter?: string): Promise<INodeListSearchResult> {
+        return await searchDocupletionDocumentSets.call(this, filter);
       },
-      async getTemplates(this: ILoadOptionsFunctions) {
-        return await loadDocupletionTemplates.call(this);
+      async searchTemplates(this: ILoadOptionsFunctions, filter?: string): Promise<INodeListSearchResult> {
+        return await searchDocupletionTemplates.call(this, filter);
       },
     },
   };
@@ -255,15 +331,16 @@ export class DocupletionForms implements INodeType {
       try {
         if (resource === 'submission') {
           const operation = this.getNodeParameter('operation', i) as string;
-          const formId = this.getNodeParameter('formId', i) as string;
+          const formId = this.getNodeParameter('formId', i, undefined, { extractValue: true }) as string;
 
           if (operation === 'listSubmissions') {
             const returnAll = this.getNodeParameter('returnAll', i) as boolean;
+            const simplify = this.getNodeParameter('simplify', i) as boolean;
             const allItems = await docupletionFormsApiRequestAllItems.call(this, `/forms/${formId}/submissions`, {}, false);
             const limitedItems = returnAll
               ? allItems
               : allItems.slice(0, this.getNodeParameter('limit', i) as number);
-            for (const entry of limitedItems) returnData.push({ json: entry });
+            for (const entry of limitedItems) returnData.push({ json: simplify ? simplifySubmission(entry) : entry });
             continue;
           }
 
@@ -298,13 +375,16 @@ export class DocupletionForms implements INodeType {
             const list = Array.isArray(result) ? result : [result];
             for (const entry of list) returnData.push({ json: entry as IDataObject });
           } else if (documentOperation === 'listMergedDocuments') {
-            const documentSetId = this.getNodeParameter('documentSetId', i) as string;
+            const documentSetId = this.getNodeParameter('documentSetId', i, undefined, { extractValue: true }) as string;
+            const simplify = this.getNodeParameter('simplify', i) as boolean;
             const result = await docupletionFormsApiRequest.call(this, 'GET', '/documents/list', {}, { id: documentSetId });
             const list = Array.isArray(result) ? result : [result];
-            for (const entry of list) returnData.push({ json: entry as IDataObject });
+            for (const entry of list) {
+              returnData.push({ json: simplify ? simplifyMergedDocument(entry as IDataObject) : (entry as IDataObject) });
+            }
           } else if (documentOperation === 'downloadMergedDocument') {
-            const documentSetId = this.getNodeParameter('documentSetId', i) as string;
-            const templateId = this.getNodeParameter('templateId', i) as string;
+            const documentSetId = this.getNodeParameter('documentSetId', i, undefined, { extractValue: true }) as string;
+            const templateId = this.getNodeParameter('templateId', i, undefined, { extractValue: true }) as string;
             const submissionId = this.getNodeParameter('submissionId', i) as string;
             const binaryPropertyName = this.getNodeParameter('binaryPropertyName', i) as string;
 

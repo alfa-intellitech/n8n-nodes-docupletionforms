@@ -3,7 +3,13 @@ import type {
   IHookFunctions,
   ILoadOptionsFunctions,
 } from 'n8n-workflow';
-import type { IDataObject, IHttpRequestMethods, INodePropertyOptions, JsonObject } from 'n8n-workflow';
+import type {
+  IDataObject,
+  IHttpRequestMethods,
+  INodeListSearchResult,
+  INodePropertyOptions,
+  JsonObject,
+} from 'n8n-workflow';
 import { NodeApiError } from 'n8n-workflow';
 
 /**
@@ -211,7 +217,10 @@ export async function loadDocupletionDocumentSets(this: ILoadOptionsFunctions): 
  * belonging to it (`fillable_pdf_id`).
  */
 export async function loadDocupletionTemplates(this: ILoadOptionsFunctions): Promise<INodePropertyOptions[]> {
-  const documentSetId = this.getCurrentNodeParameter('documentSetId') as number | string | undefined;
+  const documentSetId = this.getCurrentNodeParameter('documentSetId', { extractValue: true }) as
+    | number
+    | string
+    | undefined;
   if (!documentSetId) {
     return [{ name: '— Select a Document Set First —', value: '' }];
   }
@@ -243,4 +252,40 @@ export async function loadDocupletionTemplates(this: ILoadOptionsFunctions): Pro
   }
 
   return [{ name: '— No Templates Found —', value: '' }];
+}
+
+/**
+ * Adapts the `loadOptions`-shaped helpers above into `listSearch`-shaped
+ * results for `resourceLocator` fields (the "From List" tab). Filtering is
+ * done client-side since none of these endpoints support a server-side
+ * search/name filter — result sets here are small (forms/document sets/
+ * templates per tenant), so this is cheap.
+ */
+function toListSearchResult(options: INodePropertyOptions[], filter?: string): INodeListSearchResult {
+  const results = options
+    .filter((option) => option.value !== '')
+    .filter((option) => !filter || option.name.toLowerCase().includes(filter.toLowerCase()))
+    .map((option) => ({ name: option.name, value: option.value as string | number }));
+  return { results };
+}
+
+export async function searchDocupletionForms(
+  this: ILoadOptionsFunctions,
+  filter?: string,
+): Promise<INodeListSearchResult> {
+  return toListSearchResult(await loadDocupletionForms.call(this), filter);
+}
+
+export async function searchDocupletionDocumentSets(
+  this: ILoadOptionsFunctions,
+  filter?: string,
+): Promise<INodeListSearchResult> {
+  return toListSearchResult(await loadDocupletionDocumentSets.call(this), filter);
+}
+
+export async function searchDocupletionTemplates(
+  this: ILoadOptionsFunctions,
+  filter?: string,
+): Promise<INodeListSearchResult> {
+  return toListSearchResult(await loadDocupletionTemplates.call(this), filter);
 }

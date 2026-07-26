@@ -5,7 +5,7 @@ export class DocupletionFormsApi implements ICredentialType {
 
   displayName = 'DocupletionForms API';
 
-  documentationUrl = 'https://github.com/alfa-intellitech/docupletion-forms-n8n#readme';
+  documentationUrl = 'https://github.com/alfa-intellitech/n8n-nodes-docupletionforms#readme';
 
   properties: INodeProperties[] = [
     {

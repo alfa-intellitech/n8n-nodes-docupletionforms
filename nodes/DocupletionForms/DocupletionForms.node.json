@@ -5,8 +5,8 @@
   "codex": {
     "categories": ["Sales", "Marketing & Content"],
     "resources": {
-      "credentialDocumentation": [{ "url": "https://documenter.getpostman.com/view/620818/SzzobG3R#ddcc3c78-cc33-49a8-af30-20bdd124cdc0" }],
-      "primaryDocumentation": [{ "url": "https://documenter.getpostman.com/view/620818/SzzobG3R#ddcc3c78-cc33-49a8-af30-20bdd124cdc0" }]
+      "credentialDocumentation": [{ "url": "https://github.com/alfa-intellitech/n8n-nodes-docupletionforms#setup" }],
+      "primaryDocumentation": [{ "url": "https://github.com/alfa-intellitech/n8n-nodes-docupletionforms#readme" }]
     }
   }
 }
