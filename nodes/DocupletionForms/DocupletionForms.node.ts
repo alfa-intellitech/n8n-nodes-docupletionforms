@@ -6,7 +6,7 @@ import type {
   INodeType,
   INodeTypeDescription,
 } from 'n8n-workflow';
-import { NodeOperationError } from 'n8n-workflow';
+import { NodeConnectionTypes, NodeOperationError } from 'n8n-workflow';
 import {
   docupletionFormsApiRequest,
   docupletionFormsApiRequestAllItems,
@@ -47,8 +47,9 @@ export class DocupletionForms implements INodeType {
     description:
       'Interact with DocupletionForms — conditional logic forms with automated PDF document generation.',
     defaults: { name: 'DocupletionForms' },
-    inputs: ['main'],
-    outputs: ['main'],
+    usableAsTool: true,
+    inputs: [NodeConnectionTypes.Main],
+    outputs: [NodeConnectionTypes.Main],
     credentials: [{ name: 'docupletionFormsApi', required: true }],
     properties: [
       {
@@ -340,7 +341,9 @@ export class DocupletionForms implements INodeType {
             const limitedItems = returnAll
               ? allItems
               : allItems.slice(0, this.getNodeParameter('limit', i) as number);
-            for (const entry of limitedItems) returnData.push({ json: simplify ? simplifySubmission(entry) : entry });
+            for (const entry of limitedItems) {
+              returnData.push({ json: simplify ? simplifySubmission(entry) : entry, pairedItem: { item: i } });
+            }
             continue;
           }
 
@@ -367,20 +370,23 @@ export class DocupletionForms implements INodeType {
           const endpoint =
             operation === 'saveForLater' ? `/forms/${formId}/submit` : `/forms/${formId}/prefill`;
           const result = await docupletionFormsApiRequest.call(this, 'POST', endpoint, body);
-          returnData.push({ json: result as IDataObject });
+          returnData.push({ json: result as IDataObject, pairedItem: { item: i } });
         } else if (resource === 'document') {
           const documentOperation = this.getNodeParameter('documentOperation', i) as string;
           if (documentOperation === 'listDocumentSets') {
             const result = await docupletionFormsApiRequest.call(this, 'GET', '/documents');
             const list = Array.isArray(result) ? result : [result];
-            for (const entry of list) returnData.push({ json: entry as IDataObject });
+            for (const entry of list) returnData.push({ json: entry as IDataObject, pairedItem: { item: i } });
           } else if (documentOperation === 'listMergedDocuments') {
             const documentSetId = this.getNodeParameter('documentSetId', i, undefined, { extractValue: true }) as string;
             const simplify = this.getNodeParameter('simplify', i) as boolean;
             const result = await docupletionFormsApiRequest.call(this, 'GET', '/documents/list', {}, { id: documentSetId });
             const list = Array.isArray(result) ? result : [result];
             for (const entry of list) {
-              returnData.push({ json: simplify ? simplifyMergedDocument(entry as IDataObject) : (entry as IDataObject) });
+              returnData.push({
+                json: simplify ? simplifyMergedDocument(entry as IDataObject) : (entry as IDataObject),
+                pairedItem: { item: i },
+              });
             }
           } else if (documentOperation === 'downloadMergedDocument') {
             const documentSetId = this.getNodeParameter('documentSetId', i, undefined, { extractValue: true }) as string;
@@ -399,16 +405,17 @@ export class DocupletionForms implements INodeType {
             returnData.push({
               json: { fileName, mimeType, documentSetId, templateId, submissionId },
               binary: { [binaryPropertyName]: binaryData },
+              pairedItem: { item: i },
             });
           } else {
             throw new NodeOperationError(this.getNode(), `Unsupported operation: ${documentOperation}`, { itemIndex: i });
           }
         } else {
-          returnData.push({ json: { error: 'Unsupported resource' } });
+          returnData.push({ json: { error: 'Unsupported resource' }, pairedItem: { item: i } });
         }
       } catch (error) {
         if (this.continueOnFail()) {
-          returnData.push({ json: { error: (error as Error).message } });
+          returnData.push({ json: { error: (error as Error).message }, pairedItem: { item: i } });
         } else {
           throw new NodeOperationError(this.getNode(), error as Error, { itemIndex: i });
         }

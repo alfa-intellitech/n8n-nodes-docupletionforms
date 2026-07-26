@@ -23,19 +23,24 @@ import { NodeApiError } from 'n8n-workflow';
  * it's registered as `api/v1/forms/<id>/submissions` (no tenant segment,
  * see FormController::actionSubmissions) — pass `scoped: false` for it.
  */
-function buildUri(baseUrl: string, tenantId: string, endpoint: string, scoped = true): string {
+function buildUrl(baseUrl: string, tenantId: string, endpoint: string, scoped = true): string {
   const cleanBase = baseUrl.replace(/\/$/, '');
   const path = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
   return scoped ? `${cleanBase}/v1/${tenantId}${path}` : `${cleanBase}/v1${path}`;
 }
 
+/**
+ * `this.helpers.httpRequest` (axios-backed) rejects with `error.response.data`
+ * holding the parsed error body — unlike the deprecated `request` helper,
+ * which used `error.response.body`.
+ */
 function apiError(
   node: ConstructorParameters<typeof NodeApiError>[0],
   error: unknown,
 ): NodeApiError {
-  const err = error as { message?: string; response?: { body?: unknown } };
+  const err = error as { message?: string; response?: { data?: unknown } };
   const message = err?.message || 'Request failed';
-  const body = err?.response?.body;
+  const body = err?.response?.data;
   const description =
     body && typeof body === 'object' && 'message' in body
       ? String((body as { message?: unknown }).message)
@@ -61,7 +66,7 @@ export async function docupletionFormsApiRequest(
   scoped = true,
 ): Promise<unknown> {
   const credentials = await this.getCredentials('docupletionFormsApi');
-  const uri = buildUri(
+  const url = buildUrl(
     (credentials.baseUrl as string) || 'https://app.docupletionforms.com/api',
     credentials.tenantId as string,
     endpoint,
@@ -70,14 +75,14 @@ export async function docupletionFormsApiRequest(
 
   const options = {
     method,
-    uri,
+    url,
     qs: { ...qs, api_key: credentials.apiKey as string },
     body: Object.keys(body).length ? body : undefined,
     json: true,
   };
 
   try {
-    return await this.helpers.request(options);
+    return await this.helpers.httpRequest(options);
   } catch (error: unknown) {
     throw apiError(this.getNode(), error);
   }
@@ -96,7 +101,7 @@ export async function docupletionFormsApiRequestAllItems(
   scoped = true,
 ): Promise<IDataObject[]> {
   const credentials = await this.getCredentials('docupletionFormsApi');
-  const uri = buildUri(
+  const url = buildUrl(
     (credentials.baseUrl as string) || 'https://app.docupletionforms.com/api',
     credentials.tenantId as string,
     endpoint,
@@ -110,15 +115,15 @@ export async function docupletionFormsApiRequestAllItems(
   do {
     const options = {
       method: 'GET' as IHttpRequestMethods,
-      uri,
+      url,
       qs: { ...qs, api_key: credentials.apiKey as string, page },
       json: true,
-      resolveWithFullResponse: true,
+      returnFullResponse: true,
     };
 
     let response: { body: unknown; headers: Record<string, string> };
     try {
-      response = await this.helpers.request(options);
+      response = await this.helpers.httpRequest(options);
     } catch (error: unknown) {
       throw apiError(this.getNode(), error);
     }
@@ -136,9 +141,10 @@ export async function docupletionFormsApiRequestAllItems(
 
 /**
  * Downloads a merged PDF (GET /documents/download) as a raw binary buffer.
- * This endpoint returns a file, not JSON, so it bypasses `json: true` /
- * automatic body parsing and reads the response headers to recover the
- * file name/content type the backend set via sendFile().
+ * This endpoint returns a file, not JSON, so it requests `encoding:
+ * 'arraybuffer'` instead of automatic JSON body parsing, and reads the
+ * response headers to recover the file name/content type the backend set
+ * via sendFile().
  */
 export async function docupletionFormsApiRequestBinary(
   this: IExecuteFunctions,
@@ -146,7 +152,7 @@ export async function docupletionFormsApiRequestBinary(
   qs: IDataObject = {},
 ): Promise<{ body: Buffer; headers: Record<string, string> }> {
   const credentials = await this.getCredentials('docupletionFormsApi');
-  const uri = buildUri(
+  const url = buildUrl(
     (credentials.baseUrl as string) || 'https://app.docupletionforms.com/api',
     credentials.tenantId as string,
     endpoint,
@@ -154,18 +160,19 @@ export async function docupletionFormsApiRequestBinary(
 
   const options = {
     method: 'GET' as IHttpRequestMethods,
-    uri,
+    url,
     qs: { ...qs, api_key: credentials.apiKey as string },
-    encoding: null,
-    resolveWithFullResponse: true,
+    encoding: 'arraybuffer' as const,
+    returnFullResponse: true,
   };
 
   try {
-    const response = (await this.helpers.request(options)) as {
-      body: Buffer;
+    const response = (await this.helpers.httpRequest(options)) as {
+      body: Buffer | ArrayBuffer;
       headers: Record<string, string>;
     };
-    return { body: response.body, headers: response.headers };
+    const body = Buffer.isBuffer(response.body) ? response.body : Buffer.from(response.body);
+    return { body, headers: response.headers };
   } catch (error: unknown) {
     throw apiError(this.getNode(), error);
   }

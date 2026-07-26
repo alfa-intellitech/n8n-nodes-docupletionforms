@@ -6,8 +6,7 @@ import type {
   INodeType,
   INodeTypeDescription,
 } from 'n8n-workflow';
-import { NodeConnectionTypes } from 'n8n-workflow';
-import { NodeOperationError } from 'n8n-workflow';
+import { NodeApiError, NodeConnectionTypes, NodeOperationError } from 'n8n-workflow';
 import {
   docupletionFormsApiRequest,
   searchDocupletionDocumentSets,
@@ -312,7 +311,7 @@ export class DocupletionFormsTool implements INodeType {
         throw new NodeOperationError(this.getNode(), `Unsupported tool: ${tool}`);
       }
     } catch (error: unknown) {
-      if (error instanceof NodeOperationError || error instanceof Error) {
+      if (error instanceof NodeApiError || error instanceof NodeOperationError) {
         throw error;
       }
       throw new NodeOperationError(this.getNode(), error as Error);
@@ -325,6 +324,6 @@ export class DocupletionFormsTool implements INodeType {
           ? pickFields(result, selectedFields)
           : simplifyPayload(result);
     const output = typeof shapedResult === 'string' ? shapedResult : JSON.stringify(shapedResult);
-    return [[{ json: { response: output } }]];
+    return [[{ json: { response: output }, pairedItem: { item: 0 } }]];
   }
 }

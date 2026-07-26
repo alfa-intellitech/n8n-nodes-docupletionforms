@@ -1,9 +1,11 @@
-import type { ICredentialTestRequest, ICredentialType, INodeProperties } from 'n8n-workflow';
+import type { ICredentialTestRequest, ICredentialType, Icon, INodeProperties } from 'n8n-workflow';
 
 export class DocupletionFormsApi implements ICredentialType {
   name = 'docupletionFormsApi';
 
   displayName = 'DocupletionForms API';
+
+  icon: Icon = 'file:../nodes/DocupletionForms/docupletionforms.svg';
 
   documentationUrl = 'https://github.com/alfa-intellitech/n8n-nodes-docupletionforms#readme';
 

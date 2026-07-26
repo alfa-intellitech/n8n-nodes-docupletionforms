@@ -12,7 +12,8 @@
   "license": "MIT",
   "homepage": "https://docupletionforms.com",
   "author": {
-    "name": "DocupletionForms"
+    "name": "DocupletionForms",
+    "email": "support@docupletionforms.com"
   },
   "repository": {
     "type": "git",

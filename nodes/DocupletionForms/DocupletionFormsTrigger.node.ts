@@ -6,7 +6,7 @@ import type {
   INodeTypeDescription,
   IWebhookResponseData,
 } from 'n8n-workflow';
-import { NodeOperationError } from 'n8n-workflow';
+import { NodeConnectionTypes, NodeOperationError } from 'n8n-workflow';
 import { docupletionFormsApiRequest, searchDocupletionDocumentSets } from '../shared/GenericFunctions';
 
 const WEBHOOK_ID_KEY = 'webhookId';
@@ -18,11 +18,13 @@ export class DocupletionFormsTrigger implements INodeType {
     icon: 'file:docupletionforms.svg',
     group: ['trigger'],
     version: 1,
+    subtitle: '=Document Set: {{$parameter["documentSetId"]}}',
     description:
       'Triggers when DocupletionForms merges a submission into a PDF document set',
     defaults: { name: 'DocupletionForms Trigger' },
+    usableAsTool: true,
     inputs: [],
-    outputs: ['main'],
+    outputs: [NodeConnectionTypes.Main],
     credentials: [{ name: 'docupletionFormsApi', required: true }],
     properties: [
       {
