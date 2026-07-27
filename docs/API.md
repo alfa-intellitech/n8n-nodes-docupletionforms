@@ -2,7 +2,7 @@
 
 This document lists every DocupletionForms API endpoint used by `n8n-nodes-docupletionforms`, and how this package calls them. Keep it in sync when endpoints or response shapes change.
 
-Current implementation note: Tool-node output modes (`Simplified`, `Raw`, `Selected Fields`) only shape the returned node output and do not change API endpoints or request payloads.
+Current implementation note: the DocupletionForms node is usable as an AI Agent tool directly (`usableAsTool: true`) — there is no separate tool-specific node, so every endpoint below is reached through the one node's resources/operations regardless of whether it's driven by a human-built workflow or an agent.
 
 ---
 
@@ -26,7 +26,7 @@ Every request this package makes is built as `${baseUrl}/v1/${tenantId}${path}?.
 Lists forms for the tenant.
 
 - **Response:** Array of `{ id, name, status, is_draft, ... }`
-- **Used by:** Form dropdown (`getForms` loadOptions) in all three nodes.
+- **Used by:** Form dropdown (`getForms` loadOptions) in both nodes.
 
 ### GET /v1/&lt;tenantId&gt;/forms/&lt;formId&gt;/templates
 
@@ -43,7 +43,7 @@ Submits a form. The request body **is** the field map directly (no wrapping key)
 
 - **Body:** `{ "<field_slug>": "<value>", ..., email_address?, email_subject?, email_message? }`
 - **Response:** `{ action: "submit", success, id, message, errors, url }` — `url` is the edit link.
-- **Used by:** DocupletionForms node → Form Submission → Submit Form; Tool node → Submit Form.
+- **Used by:** DocupletionForms node → Form Submission → Submit Form.
 - **Note:** there is no link-expiry setting on this endpoint. It's only reachable via the API-key credential this package uses, not via OAuth-based integrations.
 
 ### POST /v1/&lt;tenantId&gt;/forms/&lt;formId&gt;/prefill
@@ -52,7 +52,7 @@ Builds a URL to the public form with the given fields pre-populated. Nothing is 
 
 - **Body:** `{ "<field_slug>": "<value>", ..., email_address?, email_subject?, email_message? }` (same flat shape as submit)
 - **Response:** `{ action: "prefill", success, id, message, url }`
-- **Used by:** DocupletionForms node → Form Submission → Generate Prefilled Link; Tool node → Prefill Form Link.
+- **Used by:** DocupletionForms node → Form Submission → Generate Prefilled Link.
 - **Note:** no lock-fields, redirect-URL, or expiry support — those parameters don't exist on this endpoint even though similar-looking ones show up in some third-party API docs.
 
 ### GET /v1/forms/&lt;formId&gt;/submissions
@@ -60,7 +60,7 @@ Builds a URL to the public form with the given fields pre-populated. Nothing is 
 Lists submissions for a form, newest first. **This is the one endpoint that omits the tenant segment** from its URL.
 
 - **Response:** Array of `{ id, hashId, form_id, number, ip, created_at, updated_at, status, answers }`, paginated via `X-Pagination-*` response headers. Page size is fixed server-side (~100, tied to the account's list-view preference) — the `per-page` query param is ignored, only `page` works.
-- **Used by:** DocupletionForms node → Form Submission → List Submissions (walks every page when "Return All" is on); Tool node → List Submissions (single page, client-side `.slice(0, limit)`).
+- **Used by:** DocupletionForms node → Form Submission → List Submissions (walks every page when "Return All" is on, otherwise stops once the requested limit is reached).
 
 ---
 
@@ -69,21 +69,21 @@ Lists submissions for a form, newest first. **This is the one endpoint that omit
 Lists document sets (PDF template groupings, `fillable_pdf_id`) across the tenant's forms.
 
 - **Response:** Array of `{ id, tenant_id, form_id, name, status, created_at, updated_at }`
-- **Used by:** Document Set dropdown (`getDocumentSets` loadOptions); DocupletionForms node → Merged Document → List Document Sets; Tool node → List Document Sets; internally by the Template dropdown to resolve a document set's `form_id`.
+- **Used by:** Document Set dropdown (`getDocumentSets` loadOptions); DocupletionForms node → Merged Document → List Document Sets; internally by the Template dropdown to resolve a document set's `form_id`.
 
 ### GET /v1/&lt;tenantId&gt;/documents/list?id=&lt;documentSetId&gt;
 
 Lists every submission that has generated a merged PDF for a given document set, one entry per submission with a download URL.
 
 - **Response:** Array of `{ id, name, tenant_id, form_id, submission_id, template_id, file_url, file_name, file_mimetype, file_size, submission: {...} }`
-- **Used by:** DocupletionForms node → Merged Document → List Merged Documents; Tool node → List Merged Documents.
+- **Used by:** DocupletionForms node → Merged Document → List Merged Documents.
 
 ### GET /v1/&lt;tenantId&gt;/documents/download?id=&lt;documentSetId&gt;&template_id=&lt;templateId&gt;&submission_id=&lt;submissionId&gt;
 
 Downloads the merged PDF for one document-set/template/submission combination as a raw binary file (not JSON). A template with no real fillable form fields will fail with a server-side error.
 
 - **Response:** Binary PDF. `Content-Type: application/pdf`, `Content-Disposition: inline; filename="<name>.pdf"`.
-- **Used by:** DocupletionForms node → Merged Document → Download Merged Document. Not exposed on the Tool node — its output contract is text/JSON only, no binary.
+- **Used by:** DocupletionForms node → Merged Document → Download Merged Document.
 
 ### POST /v1/&lt;tenantId&gt;/documents/webhooks
 

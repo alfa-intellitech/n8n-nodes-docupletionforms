@@ -2,11 +2,9 @@
   "node": "n8n-nodes-docupletionforms.docupletionFormsTrigger",
   "nodeVersion": "1.0",
   "codexVersion": "1.0",
-  "codex": {
-    "categories": ["Sales", "Marketing & Content"],
-    "resources": {
-      "credentialDocumentation": [{ "url": "https://github.com/alfa-intellitech/n8n-nodes-docupletionforms#setup" }],
-      "primaryDocumentation": [{ "url": "https://github.com/alfa-intellitech/n8n-nodes-docupletionforms#readme" }]
-    }
+  "categories": ["Sales", "Marketing & Content"],
+  "resources": {
+    "credentialDocumentation": [{ "url": "https://github.com/alfa-intellitech/n8n-nodes-docupletionforms#setup" }],
+    "primaryDocumentation": [{ "url": "https://github.com/alfa-intellitech/n8n-nodes-docupletionforms#readme" }]
   }
 }

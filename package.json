@@ -39,8 +39,7 @@
     ],
     "nodes": [
       "dist/nodes/DocupletionForms/DocupletionForms.node.js",
-      "dist/nodes/DocupletionForms/DocupletionFormsTrigger.node.js",
-      "dist/nodes/DocupletionForms/DocupletionFormsTool.node.js"
+      "dist/nodes/DocupletionForms/DocupletionFormsTrigger.node.js"
     ]
   },
   "devDependencies": {

@@ -192,7 +192,10 @@ export async function loadDocupletionForms(this: ILoadOptionsFunctions): Promise
       }));
     }
   } catch (_) {
-    // ignore
+    // Dropdown population, not the main action — surfacing a thrown
+    // NodeApiError here would break the node's field list instead of just
+    // this one field, so fall through to the "not found" placeholder below
+    // and let the real error resurface when the operation itself runs.
   }
 
   return [{ name: '— No Forms Found —', value: '' }];
@@ -214,7 +217,9 @@ export async function loadDocupletionDocumentSets(this: ILoadOptionsFunctions): 
       }));
     }
   } catch (_) {
-    // ignore
+    // Dropdown population, not the main action — same reasoning as
+    // loadDocupletionForms above: fall through to the placeholder rather
+    // than fail the whole field list on a transient API error.
   }
 
   return [{ name: '— No Document Sets Found —', value: '' }];
@@ -259,7 +264,9 @@ export async function loadDocupletionTemplates(this: ILoadOptionsFunctions): Pro
       }));
     }
   } catch (_) {
-    // ignore
+    // Dropdown population, not the main action — same reasoning as
+    // loadDocupletionForms above: fall through to the placeholder rather
+    // than fail the whole field list on a transient API error.
   }
 
   return [{ name: '— No Templates Found —', value: '' }];

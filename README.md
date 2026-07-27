@@ -40,7 +40,7 @@ Picking a form or document set opens a searchable list pulled live from your Doc
 - *List Merged Documents* — lists every submission that has generated a merged PDF for a document set, with a download URL per file.
 - *Download Merged Document* — downloads one merged PDF as binary data, ready to attach to an email or upload elsewhere.
 
-There's also a **DocupletionForms Trigger** node, which fires when a submission generates a merged PDF for a chosen document set, and a **DocupletionForms Tool** node for connecting to an AI Agent (submit forms, generate prefill links, and look up submissions/documents using natural language).
+There's also a **DocupletionForms Trigger** node, which fires when a submission generates a merged PDF for a chosen document set. The **DocupletionForms** node itself can be added as an AI Agent tool — n8n does this automatically for any node marked `usableAsTool`, so the same resources/operations above (submit forms, generate prefill links, look up submissions/documents) are available to an agent without a separate tool-specific node.
 
 Fill in the field values and hit **Execute step** to try it:
 

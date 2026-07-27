@@ -28,7 +28,7 @@ There is no bundled `docker-compose.yml` for this package. To run against a Docu
      -v $(pwd)/dist:/custom:ro \
      n8nio/n8n:latest
    ```
-3. Open http://localhost:5678, complete the one-time owner setup, and confirm **DocupletionForms**, **DocupletionForms Trigger**, and **DocupletionForms Tool** appear in the node list.
+3. Open http://localhost:5678, complete the one-time owner setup, and confirm **DocupletionForms** and **DocupletionForms Trigger** appear in the node list.
 4. Point the credential's **Base URL** at the backend's in-network address (its Docker container name, not `localhost`), since n8n is reaching it over the Docker network.
 5. For **webhook trigger** testing, DocupletionForms must be able to POST to your n8n instance. If n8n runs only on localhost, use a tunnel (e.g. [ngrok](https://ngrok.com)) and set `WEBHOOK_URL`/`N8N_HOST` so the registered webhook URL is the public tunnel URL.
 6. After code changes: `npm run build`, then `docker restart n8n-dev` (custom extensions are loaded at startup, not hot-reloaded).
