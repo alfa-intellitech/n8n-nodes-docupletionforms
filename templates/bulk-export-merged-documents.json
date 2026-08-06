@@ -1,0 +1,52 @@
+{
+  "name": "Bulk Export All Merged Documents for a Document Set",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [0, 0],
+      "id": "b4e4a004-0001-4a00-8000-000000000001",
+      "name": "When clicking 'Execute workflow'"
+    },
+    {
+      "parameters": {
+        "resource": "document",
+        "documentOperation": "listMergedDocuments",
+        "documentSetId": { "__rl": true, "mode": "list", "value": "" },
+        "simplify": true
+      },
+      "type": "n8n-nodes-docupletionforms.docupletionForms",
+      "typeVersion": 1,
+      "position": [400, 0],
+      "id": "b4e4a004-0001-4a00-8000-000000000002",
+      "name": "List Merged Documents"
+    },
+    {
+      "parameters": {
+        "resource": "document",
+        "documentOperation": "downloadMergedDocument",
+        "documentSetId": { "__rl": true, "mode": "list", "value": "" },
+        "templateId": { "__rl": true, "mode": "id", "value": "={{ $json.template_id }}" },
+        "submissionId": "={{ $json.submission_id }}",
+        "binaryPropertyName": "data"
+      },
+      "type": "n8n-nodes-docupletionforms.docupletionForms",
+      "typeVersion": 1,
+      "position": [800, 0],
+      "id": "b4e4a004-0001-4a00-8000-000000000003",
+      "name": "Download Merged Document"
+    }
+  ],
+  "connections": {
+    "When clicking 'Execute workflow'": {
+      "main": [[{ "node": "List Merged Documents", "type": "main", "index": 0 }]]
+    },
+    "List Merged Documents": {
+      "main": [[{ "node": "Download Merged Document", "type": "main", "index": 0 }]]
+    }
+  },
+  "pinData": {},
+  "active": false,
+  "settings": { "executionOrder": "v1" }
+}

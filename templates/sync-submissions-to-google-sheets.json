@@ -1,0 +1,36 @@
+{
+  "name": "Sync New Submissions to Google Sheets",
+  "nodes": [
+    {
+      "parameters": {
+        "event": "formSubmitted",
+        "formId": { "__rl": true, "mode": "list", "value": "" }
+      },
+      "type": "n8n-nodes-docupletionforms.docupletionFormsTrigger",
+      "typeVersion": 1,
+      "position": [0, 0],
+      "id": "b3e3a003-0001-4a00-8000-000000000001",
+      "name": "DocupletionForms Trigger"
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": { "__rl": true, "mode": "list", "value": "" },
+        "sheetName": { "__rl": true, "mode": "list", "value": "" }
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [400, 0],
+      "id": "b3e3a003-0001-4a00-8000-000000000002",
+      "name": "Append to Google Sheets"
+    }
+  ],
+  "connections": {
+    "DocupletionForms Trigger": {
+      "main": [[{ "node": "Append to Google Sheets", "type": "main", "index": 0 }]]
+    }
+  },
+  "pinData": {},
+  "active": false,
+  "settings": { "executionOrder": "v1" }
+}

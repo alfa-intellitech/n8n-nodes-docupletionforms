@@ -1,0 +1,58 @@
+{
+  "name": "Merged Document → Auto-Upload to Google Drive",
+  "nodes": [
+    {
+      "parameters": {
+        "event": "documentMerged",
+        "documentSetId": { "__rl": true, "mode": "list", "value": "" },
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-docupletionforms.docupletionFormsTrigger",
+      "typeVersion": 1,
+      "position": [0, 0],
+      "id": "b2e2a002-0001-4a00-8000-000000000001",
+      "name": "DocupletionForms Trigger"
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.file_url }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [400, 0],
+      "id": "b2e2a002-0001-4a00-8000-000000000002",
+      "name": "Download PDF"
+    },
+    {
+      "parameters": {
+        "name": "={{ $('DocupletionForms Trigger').item.json.file_name }}",
+        "driveId": { "__rl": true, "mode": "list", "value": "My Drive", "cachedResultName": "My Drive" },
+        "folderId": { "__rl": true, "mode": "list", "value": "root", "cachedResultName": "/ (Root folder)" },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [800, 0],
+      "id": "b2e2a002-0001-4a00-8000-000000000003",
+      "name": "Upload to Google Drive"
+    }
+  ],
+  "connections": {
+    "DocupletionForms Trigger": {
+      "main": [[{ "node": "Download PDF", "type": "main", "index": 0 }]]
+    },
+    "Download PDF": {
+      "main": [[{ "node": "Upload to Google Drive", "type": "main", "index": 0 }]]
+    }
+  },
+  "pinData": {},
+  "active": false,
+  "settings": { "executionOrder": "v1" }
+}

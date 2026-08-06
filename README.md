@@ -58,6 +58,10 @@ Fill in the field values and hit **Execute step** to try it:
 - **Sync new submissions to a spreadsheet or CRM:** DocupletionForms Trigger (*Form Submitted*) → whatever node writes the data out, instead of polling with *List Submissions*.
 - **Trigger downstream work when a document is ready:** DocupletionForms Trigger (*Document Merged*) → process the delivered file URL / submission payload in the next nodes.
 
+### Ready-made templates
+
+Don't want to build one of the above from scratch? The [`templates/`](templates) folder has five importable workflows covering these exact use cases (Slack notifications, Google Drive/Sheets sync, bulk document export, and an AI Agent wired up with DocupletionForms as a tool) — see [templates/README.md](templates/README.md).
+
 ## API Resources / Operations
 
 This node covers form submission, prefill links, submission listing, and merged-document generation/delivery — the endpoints most workflows need to act on form activity. It doesn't cover DocupletionForms' form-*building* API (creating/editing forms, field mapping, conditional rules) — that side is intentionally MCP/AI-drafting-only on the DocupletionForms backend, with a human always publishing the result in the app.

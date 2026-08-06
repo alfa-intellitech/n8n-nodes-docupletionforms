@@ -1,0 +1,40 @@
+{
+  "name": "New Form Submission → Slack Notification",
+  "nodes": [
+    {
+      "parameters": {
+        "event": "formSubmitted",
+        "formId": { "__rl": true, "mode": "list", "value": "" }
+      },
+      "type": "n8n-nodes-docupletionforms.docupletionFormsTrigger",
+      "typeVersion": 1,
+      "position": [0, 0],
+      "id": "b1e1a001-0001-4a00-8000-000000000001",
+      "name": "DocupletionForms Trigger"
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "operation": "post",
+        "select": "channel",
+        "channelId": { "__rl": true, "mode": "list", "value": "" },
+        "messageType": "text",
+        "text": "=📩 New submission on *{{ $json.form_name }}* (#{{ $json.number }})\n{{ Object.entries($json.answers || {}).filter(([,v]) => v !== null && v !== '').map(([k, v]) => `${k}: ${v}`).join(' | ') }}",
+        "otherOptions": {}
+      },
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.5,
+      "position": [400, 0],
+      "id": "b1e1a001-0001-4a00-8000-000000000002",
+      "name": "Send Slack Notification"
+    }
+  ],
+  "connections": {
+    "DocupletionForms Trigger": {
+      "main": [[{ "node": "Send Slack Notification", "type": "main", "index": 0 }]]
+    }
+  },
+  "pinData": {},
+  "active": false,
+  "settings": { "executionOrder": "v1" }
+}
