@@ -40,7 +40,11 @@ Picking a form or document set opens a searchable list pulled live from your Doc
 - *List Merged Documents* — lists every submission that has generated a merged PDF for a document set, with a download URL per file.
 - *Download Merged Document* — downloads one merged PDF as binary data, ready to attach to an email or upload elsewhere.
 
-There's also a **DocupletionForms Trigger** node, which fires when a submission generates a merged PDF for a chosen document set. The **DocupletionForms** node itself can be added as an AI Agent tool — n8n does this automatically for any node marked `usableAsTool`, so the same resources/operations above (submit forms, generate prefill links, look up submissions/documents) are available to an agent without a separate tool-specific node.
+There's also a **DocupletionForms Trigger** node, with two events:
+- *Form Submitted* — fires on every new submission received for a chosen form.
+- *Document Merged* — fires when a submission is merged into a PDF for a chosen document set (the pre-existing behavior, kept as the default for backward compatibility).
+
+The **DocupletionForms** node itself can be added as an AI Agent tool — n8n does this automatically for any node marked `usableAsTool`, so the same resources/operations above (submit forms, generate prefill links, look up submissions/documents) are available to an agent without a separate tool-specific node.
 
 Fill in the field values and hit **Execute step** to try it:
 
@@ -51,8 +55,8 @@ Fill in the field values and hit **Execute step** to try it:
 ### Example workflows
 
 - **Deliver a generated document automatically:** *List Merged Documents* (to find a submission's `template_id`) → *Download Merged Document* (same document set, that `template_id` + `submission_id`) → attach the resulting binary to an email/Slack message.
-- **Sync new submissions to a spreadsheet or CRM:** *List Submissions* on a schedule trigger, feeding into whatever node writes the data out.
-- **Trigger downstream work when a document is ready:** DocupletionForms Trigger → process the delivered file URL / submission payload in the next nodes.
+- **Sync new submissions to a spreadsheet or CRM:** DocupletionForms Trigger (*Form Submitted*) → whatever node writes the data out, instead of polling with *List Submissions*.
+- **Trigger downstream work when a document is ready:** DocupletionForms Trigger (*Document Merged*) → process the delivered file URL / submission payload in the next nodes.
 
 ## API Resources / Operations
 

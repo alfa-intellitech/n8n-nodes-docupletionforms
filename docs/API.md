@@ -8,7 +8,7 @@ Current implementation note: the DocupletionForms node is usable as an AI Agent 
 
 ## Authentication
 
-DocupletionForms' API key auth is passed as an **`api_key` query parameter**, not a header — there is no `Authorization: Bearer` or `X-API-Key` scheme on this API. Every route below (except one, noted) is also scoped to a tenant via a `/v1/<tenantId>/...` URL segment.
+DocupletionForms' API key auth is passed as an **`api_key` query parameter**, not a header — there is no `Authorization: Bearer` or `X-API-Key` scheme on this API. Most routes below are also scoped to a tenant via a `/v1/<tenantId>/...` URL segment — the exceptions (submissions listing, both `/webhooks` routes) are noted individually.
 
 Credential fields:
 - **API Key** — a DocupletionForms user access token.
@@ -87,21 +87,21 @@ Downloads the merged PDF for one document-set/template/submission combination as
 
 ### POST /v1/&lt;tenantId&gt;/documents/webhooks
 
-Registers a webhook that fires when a submission generates a merged PDF for the given document set. There is no "new form submitted" event independent of document merging, and deliveries are **not signed** — there's no shared secret to verify against.
+Registers a webhook that fires when a submission generates a merged PDF for the given document set. Deliveries are **not signed** — there's no shared secret to verify against.
 
 - **Body:** `{ fillable_pdf_id: <documentSetId>, url: <webhookUrl>, content_type: 1 }` (`content_type`: `1` = JSON metadata only, `2` = file only, `3` = file + metadata — this package always sends `1`)
 - **Response:** `{ id, tenant_id, fillable_pdf_id, form_id, status, url, content_type, created_at, updated_at }`
-- **Used by:** DocupletionForms Trigger (create).
+- **Used by:** DocupletionForms Trigger (create) → Document Merged event.
 
 ### DELETE /v1/&lt;tenantId&gt;/documents/webhooks/&lt;id&gt;
 
-Deregisters a webhook.
+Deregisters a document-merge webhook.
 
-- **Used by:** DocupletionForms Trigger (delete).
+- **Used by:** DocupletionForms Trigger (delete) → Document Merged event.
 
-### Webhook delivery payload
+### Document Merged webhook delivery payload
 
-What DocupletionForms POSTs to a registered webhook URL when a document merges:
+What DocupletionForms POSTs to a registered document-merge webhook URL when a document merges:
 
 ```json
 {
@@ -112,4 +112,34 @@ What DocupletionForms POSTs to a registered webhook URL when a document merges:
 }
 ```
 
-- **Used by:** DocupletionForms Trigger's `webhook()` handler — "Include Submission Data" (default on) controls whether the `submission` object is stripped from the output.
+- **Used by:** DocupletionForms Trigger's `webhook()` handler for the Document Merged event — "Include Submission Data" (default on) controls whether the `submission` object is stripped from the output.
+
+### POST /v1/webhooks
+
+Registers a webhook that fires on every new submission accepted for the given form (`app.form.submission.accepted` server-side event — see `modules/addons/modules/webhooks/Module.php`). **This route has no tenant segment** — the backend derives the tenant from the API key's user identity server-side (`Webhook::beforeSave()` falls back to `Yii::$app->user->identity->current_tenant_id`). Also not signed.
+
+- **Body:** `{ form_id: <formId>, url: <webhookUrl>, name: <string>, status: 1, json: 1 }` — `name` is required at the database layer (`addon_webhooks.name` is `NOT NULL` with no default) even though the model's own validation doesn't require it; this package auto-generates one from the workflow name/ID.
+- **Response:** `{ id, form_id, url, handshake_key, status, json, alias, created_by, updated_by, created_at, updated_at }`
+- **Used by:** DocupletionForms Trigger (create) → Form Submitted event.
+- **Note:** requires the "Webhooks" addon to be installed/enabled on the target DocupletionForms instance — it's a distinct addon from the document-merge webhook mechanism, which doesn't have this dependency.
+
+### DELETE /v1/webhooks/&lt;id&gt;
+
+Deregisters a form-submission webhook. Also has no tenant segment.
+
+- **Used by:** DocupletionForms Trigger (delete) → Form Submitted event.
+
+### Form Submitted webhook delivery payload
+
+What DocupletionForms POSTs to a registered form-submission webhook URL on every new submission:
+
+```json
+{
+  "id": 31, "form_id": 15, "form_name": "Hospital Intake Form", "number": 3,
+  "ip": "81.2.69.160", "created_at": 1785985554, "updated_at": 1785985554,
+  "created_by": 1, "updated_by": 1, "status": null, "new": null,
+  "answers": { "Name [text_1]": "...", "...": "..." }
+}
+```
+
+- **Used by:** DocupletionForms Trigger's `webhook()` handler for the Form Submitted event — passed through unchanged, no fields stripped.

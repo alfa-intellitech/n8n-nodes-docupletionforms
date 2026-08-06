@@ -19,9 +19,13 @@ import { NodeApiError } from 'n8n-workflow';
  * `api_key` query parameter, not a header — there is no "Bearer <apiKey>"
  * or "X-API-Key" scheme on this API.
  *
- * `GET /forms/{id}/submissions` is the one exception in the route table —
- * it's registered as `api/v1/forms/<id>/submissions` (no tenant segment,
- * see FormController::actionSubmissions) — pass `scoped: false` for it.
+ * `GET /forms/{id}/submissions` and the form-submission webhook routes
+ * (`POST /webhooks`, `DELETE /webhooks/{id}`) are the exceptions in the
+ * route table — registered as `api/v1/forms/<id>/submissions` and
+ * `api/v1/webhook(s)` with no tenant segment (see FormController::
+ * actionSubmissions and the generic ActiveController-backed
+ * WebhookController; the latter derives its tenant from the API key's
+ * user identity server-side instead) — pass `scoped: false` for these.
  */
 function buildUrl(baseUrl: string, tenantId: string, endpoint: string, scoped = true): string {
   const cleanBase = baseUrl.replace(/\/$/, '');
