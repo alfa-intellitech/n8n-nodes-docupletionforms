@@ -1,6 +1,45 @@
 {
-  "name": "Bulk Export All Merged Documents for a Document Set",
+  "name": "Export all merged documents from a DocupletionForms document set",
   "nodes": [
+    {
+      "parameters": {
+        "content": "## Export all merged documents from a DocupletionForms document set\n\n![Workflow overview](https://raw.githubusercontent.com/alfa-intellitech/n8n-nodes-docupletionforms/main/templates/images/bulk-export-merged-documents.png)\n\n**Uses a community node ([n8n-nodes-docupletionforms](https://www.npmjs.com/package/n8n-nodes-docupletionforms)) — self-hosted n8n only, not available on n8n Cloud.**\n\n### Who's it for\nTeams using [DocupletionForms](https://docupletionforms.com) who need to pull every generated PDF for a document set at once — an end-of-month archive, an audit request, migrating documents elsewhere — instead of downloading them one at a time from the dashboard.\n\n### How it works\nRun this manually whenever you need a fresh export. It lists every merged document for a chosen document set, then downloads each one as binary data in the same execution.\n\n### How to set up\n1. Add your DocupletionForms API credential.\n2. Pick the same Document Set on both the List Merged Documents and Download Merged Document nodes.\n\n### Requirements\n- Self-hosted n8n with `n8n-nodes-docupletionforms` installed (Settings → Community Nodes).\n- A DocupletionForms account and API key.\n\n### How to customize\nAdd a node after Download Merged Document to save each file somewhere (Google Drive, S3, the Read/Write Files node) instead of just holding it in the execution output. Replace the Manual Trigger with a Schedule Trigger to run this automatically instead of by hand.",
+        "height": 880,
+        "width": 640,
+        "color": 1
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [-680, -580],
+      "id": "b4e4a004-0001-4a00-8000-000000000010",
+      "name": "Description"
+    },
+    {
+      "parameters": {
+        "content": "### Step 1\nSet up your DocupletionForms credential and pick the Document Set to export.",
+        "height": 160,
+        "width": 320,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [360, -280],
+      "id": "b4e4a004-0001-4a00-8000-000000000011",
+      "name": "Step 1 Note"
+    },
+    {
+      "parameters": {
+        "content": "### Step 2\nPick the same Document Set here too — each node needs it set separately.",
+        "height": 160,
+        "width": 320,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [760, -280],
+      "id": "b4e4a004-0001-4a00-8000-000000000012",
+      "name": "Step 2 Note"
+    },
     {
       "parameters": {},
       "type": "n8n-nodes-base.manualTrigger",

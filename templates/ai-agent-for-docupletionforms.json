@@ -1,6 +1,45 @@
 {
-  "name": "AI Agent for DocupletionForms",
+  "name": "Submit and look up DocupletionForms forms with an AI agent",
   "nodes": [
+    {
+      "parameters": {
+        "content": "## Submit and look up DocupletionForms forms with an AI agent\n\n![Workflow overview](https://raw.githubusercontent.com/alfa-intellitech/n8n-nodes-docupletionforms/main/templates/images/ai-agent-for-docupletionforms.png)\n\n**Uses a community node ([n8n-nodes-docupletionforms](https://www.npmjs.com/package/n8n-nodes-docupletionforms)) — self-hosted n8n only, not available on n8n Cloud.**\n\n### Who's it for\nTeams who want to fill out or check [DocupletionForms](https://docupletionforms.com) submissions through a chat interface (a Slack bot, an internal chat widget, or the built-in n8n chat) instead of opening the DocupletionForms app.\n\n### How it works\nA chat message triggers an AI Agent with two DocupletionForms tools attached: one submits a form with field values the agent extracts from the conversation, the other looks up existing submissions for a form. The agent decides which tool to call based on what the user asks for.\n\n### How to set up\n1. Add your OpenAI credential to the Chat Model node.\n2. Add your DocupletionForms credential to both DocupletionForms tool nodes, and pick the Form each one should use.\n\n### Requirements\n- Self-hosted n8n with `n8n-nodes-docupletionforms` installed (Settings → Community Nodes).\n- A DocupletionForms account and API key.\n- An OpenAI API key (or swap in any other n8n Chat Model node).\n\n### How to customize\nAttach more DocupletionForms tool instances (Generate Prefilled Link, List Document Sets, Download Merged Document) the same way — add the node under the agent's Tool port and pick the Resource/Operation you want to expose.",
+        "height": 880,
+        "width": 660,
+        "color": 1
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [-700, -600],
+      "id": "b5e5a005-0001-4a00-8000-000000000010",
+      "name": "Description"
+    },
+    {
+      "parameters": {
+        "content": "### Step 1\nSet up your OpenAI credential here (or swap in a different Chat Model node).",
+        "height": 160,
+        "width": 300,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [0, 260],
+      "id": "b5e5a005-0001-4a00-8000-000000000011",
+      "name": "Step 1 Note"
+    },
+    {
+      "parameters": {
+        "content": "### Step 2\nSet up your DocupletionForms credential on each tool node below and pick the Form it should use.",
+        "height": 160,
+        "width": 400,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [640, 200],
+      "id": "b5e5a005-0001-4a00-8000-000000000012",
+      "name": "Step 2 Note"
+    },
     {
       "parameters": {
         "options": {}

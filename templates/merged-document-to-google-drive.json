@@ -1,6 +1,45 @@
 {
-  "name": "Merged Document → Auto-Upload to Google Drive",
+  "name": "Upload merged DocupletionForms PDFs to Google Drive",
   "nodes": [
+    {
+      "parameters": {
+        "content": "## Upload merged DocupletionForms PDFs to Google Drive\n\n![Workflow overview](https://raw.githubusercontent.com/alfa-intellitech/n8n-nodes-docupletionforms/main/templates/images/merged-document-to-google-drive.png)\n\n**Uses a community node ([n8n-nodes-docupletionforms](https://www.npmjs.com/package/n8n-nodes-docupletionforms)) — self-hosted n8n only, not available on n8n Cloud.**\n\n### Who's it for\nTeams using [DocupletionForms](https://docupletionforms.com) who want every merged PDF (contracts, intake forms, generated documents) automatically archived to Google Drive instead of downloading them manually.\n\n### How it works\nThe DocupletionForms Trigger fires the *Document Merged* event whenever a submission is merged into a PDF for a chosen document set. The delivered file URL is downloaded via an HTTP Request node, then uploaded to Google Drive under its original file name.\n\n### How to set up\n1. Add your DocupletionForms API credential and pick the Document Set to watch.\n2. Add your Google Drive credential and choose (or leave default) the destination folder.\n\n### Requirements\n- Self-hosted n8n with `n8n-nodes-docupletionforms` installed (Settings → Community Nodes).\n- A DocupletionForms account and API key.\n- A Google Drive account connected via OAuth2.\n\n### How to customize\nPoint the upload at a specific shared drive/folder, or swap Google Drive for another storage node (Dropbox, S3, OneDrive) — the HTTP Request node's binary output works the same way with any of them.",
+        "height": 940,
+        "width": 640,
+        "color": 1
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [-680, -640],
+      "id": "b2e2a002-0001-4a00-8000-000000000010",
+      "name": "Description"
+    },
+    {
+      "parameters": {
+        "content": "### Step 1\nSet up your DocupletionForms credential, then pick the Document Set to watch below.",
+        "height": 160,
+        "width": 320,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [-40, -280],
+      "id": "b2e2a002-0001-4a00-8000-000000000011",
+      "name": "Step 1 Note"
+    },
+    {
+      "parameters": {
+        "content": "### Step 2\nSet up your Google Drive credential and choose a destination folder (defaults to My Drive root).",
+        "height": 160,
+        "width": 320,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [760, -280],
+      "id": "b2e2a002-0001-4a00-8000-000000000012",
+      "name": "Step 2 Note"
+    },
     {
       "parameters": {
         "event": "documentMerged",
