@@ -31,8 +31,7 @@ intentionally-empty Form/Document Set/credential fields described above.
 These are also formatted to meet [n8n's template submission
 guidelines](https://n8n.notion.site/Template-submission-guidelines-9959894476734da3b402c90b124b1f77):
 a mandatory yellow description sticky (with the required Who's it for / How it
-works / How to set up / Requirements / How to customize sections and a
-self-hosted-only disclaimer, since this uses a community node), neutral step
-notes, an SEO-style title, and an embedded workflow screenshot at the top
-(under [`images/`](images)) since template previews don't render unrecognized
-community-node icons.
+works / How to set up / Requirements / How to customize sections), neutral
+step notes, an SEO-style title, and an embedded workflow screenshot at the top
+(under [`images/`](images)). `n8n-nodes-docupletionforms` is a **verified**
+node available on both n8n Cloud and self-hosted instances.

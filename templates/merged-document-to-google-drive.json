@@ -3,14 +3,17 @@
   "nodes": [
     {
       "parameters": {
-        "content": "## Upload merged DocupletionForms PDFs to Google Drive\n\n![Workflow overview](https://raw.githubusercontent.com/alfa-intellitech/n8n-nodes-docupletionforms/main/templates/images/merged-document-to-google-drive.png)\n\n**Uses a community node ([n8n-nodes-docupletionforms](https://www.npmjs.com/package/n8n-nodes-docupletionforms)) — self-hosted n8n only, not available on n8n Cloud.**\n\n### Who's it for\nTeams using [DocupletionForms](https://docupletionforms.com) who want every merged PDF (contracts, intake forms, generated documents) automatically archived to Google Drive instead of downloading them manually.\n\n### How it works\nThe DocupletionForms Trigger fires the *Document Merged* event whenever a submission is merged into a PDF for a chosen document set. The delivered file URL is downloaded via an HTTP Request node, then uploaded to Google Drive under its original file name.\n\n### How to set up\n1. Add your DocupletionForms API credential and pick the Document Set to watch.\n2. Add your Google Drive credential and choose (or leave default) the destination folder.\n\n### Requirements\n- Self-hosted n8n with `n8n-nodes-docupletionforms` installed (Settings → Community Nodes).\n- A DocupletionForms account and API key.\n- A Google Drive account connected via OAuth2.\n\n### How to customize\nPoint the upload at a specific shared drive/folder, or swap Google Drive for another storage node (Dropbox, S3, OneDrive) — the HTTP Request node's binary output works the same way with any of them.",
+        "content": "## Upload merged DocupletionForms PDFs to Google Drive\n\n![Workflow overview](https://raw.githubusercontent.com/alfa-intellitech/n8n-nodes-docupletionforms/main/templates/images/merged-document-to-google-drive.png)\n\n**Uses the verified [n8n-nodes-docupletionforms](https://www.npmjs.com/package/n8n-nodes-docupletionforms) node — available on n8n Cloud and self-hosted instances.**\n\n### Who's it for\nTeams using [DocupletionForms](https://docupletionforms.com) who want every merged PDF (contracts, intake forms, generated documents) automatically archived to Google Drive instead of downloading them manually.\n\n### How it works\nThe DocupletionForms Trigger fires the *Document Merged* event whenever a submission is merged into a PDF for a chosen document set. The delivered file URL is downloaded via an HTTP Request node, then uploaded to Google Drive under its original file name.\n\n### How to set up\n1. Add your DocupletionForms API credential and pick the Document Set to watch.\n2. Add your Google Drive credential and choose (or leave default) the destination folder.\n\n### Requirements\n- n8n (Cloud or self-hosted) with `n8n-nodes-docupletionforms` installed — on Cloud, enable it under Settings → Community Nodes; verified nodes are approved for Cloud installs.\n- A DocupletionForms account and API key.\n- A Google Drive account connected via OAuth2.\n\n### How to customize\nPoint the upload at a specific shared drive/folder, or swap Google Drive for another storage node (Dropbox, S3, OneDrive) — the HTTP Request node's binary output works the same way with any of them.",
         "height": 940,
         "width": 640,
         "color": 1
       },
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
-      "position": [-680, -640],
+      "position": [
+        -680,
+        -640
+      ],
       "id": "b2e2a002-0001-4a00-8000-000000000010",
       "name": "Description"
     },
@@ -23,7 +26,10 @@
       },
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
-      "position": [-40, -280],
+      "position": [
+        -40,
+        -280
+      ],
       "id": "b2e2a002-0001-4a00-8000-000000000011",
       "name": "Step 1 Note"
     },
@@ -36,19 +42,29 @@
       },
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
-      "position": [760, -280],
+      "position": [
+        760,
+        -280
+      ],
       "id": "b2e2a002-0001-4a00-8000-000000000012",
       "name": "Step 2 Note"
     },
     {
       "parameters": {
         "event": "documentMerged",
-        "documentSetId": { "__rl": true, "mode": "list", "value": "" },
+        "documentSetId": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
         "additionalFields": {}
       },
       "type": "n8n-nodes-docupletionforms.docupletionFormsTrigger",
       "typeVersion": 1,
-      "position": [0, 0],
+      "position": [
+        0,
+        0
+      ],
       "id": "b2e2a002-0001-4a00-8000-000000000001",
       "name": "DocupletionForms Trigger"
     },
@@ -65,33 +81,67 @@
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.4,
-      "position": [400, 0],
+      "position": [
+        400,
+        0
+      ],
       "id": "b2e2a002-0001-4a00-8000-000000000002",
       "name": "Download PDF"
     },
     {
       "parameters": {
         "name": "={{ $('DocupletionForms Trigger').item.json.file_name }}",
-        "driveId": { "__rl": true, "mode": "list", "value": "My Drive", "cachedResultName": "My Drive" },
-        "folderId": { "__rl": true, "mode": "list", "value": "root", "cachedResultName": "/ (Root folder)" },
+        "driveId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "My Drive",
+          "cachedResultName": "My Drive"
+        },
+        "folderId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "root",
+          "cachedResultName": "/ (Root folder)"
+        },
         "options": {}
       },
       "type": "n8n-nodes-base.googleDrive",
       "typeVersion": 3,
-      "position": [800, 0],
+      "position": [
+        800,
+        0
+      ],
       "id": "b2e2a002-0001-4a00-8000-000000000003",
       "name": "Upload to Google Drive"
     }
   ],
   "connections": {
     "DocupletionForms Trigger": {
-      "main": [[{ "node": "Download PDF", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Download PDF",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Download PDF": {
-      "main": [[{ "node": "Upload to Google Drive", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Upload to Google Drive",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "pinData": {},
   "active": false,
-  "settings": { "executionOrder": "v1" }
+  "settings": {
+    "executionOrder": "v1"
+  }
 }

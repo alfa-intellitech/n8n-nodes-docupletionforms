@@ -3,14 +3,17 @@
   "nodes": [
     {
       "parameters": {
-        "content": "## Sync DocupletionForms submissions to Google Sheets\n\n![Workflow overview](https://raw.githubusercontent.com/alfa-intellitech/n8n-nodes-docupletionforms/main/templates/images/sync-submissions-to-google-sheets.png)\n\n**Uses a community node ([n8n-nodes-docupletionforms](https://www.npmjs.com/package/n8n-nodes-docupletionforms)) — self-hosted n8n only, not available on n8n Cloud.**\n\n### Who's it for\nTeams using [DocupletionForms](https://docupletionforms.com) who track submissions in a spreadsheet (for reporting, a lightweight CRM, or handoff to non-technical teammates) and want new rows added automatically instead of exporting or copy-pasting.\n\n### How it works\nThe DocupletionForms Trigger fires the *Form Submitted* event on every new submission for a chosen form. Each submission is appended as a new row in a Google Sheet, or an existing row is updated if the sheet has a matching key column.\n\n### How to set up\n1. Add your DocupletionForms API credential and pick the Form to watch.\n2. Add your Google Sheets credential, then choose the spreadsheet and sheet/tab to write to.\n\n### Requirements\n- Self-hosted n8n with `n8n-nodes-docupletionforms` installed (Settings → Community Nodes).\n- A DocupletionForms account and API key.\n- A Google account with edit access to the target spreadsheet.\n\n### How to customize\nMap only the answer fields you care about instead of auto-mapping every column, or add a Filter/IF node beforehand to only sync submissions matching certain criteria.",
+        "content": "## Sync DocupletionForms submissions to Google Sheets\n\n![Workflow overview](https://raw.githubusercontent.com/alfa-intellitech/n8n-nodes-docupletionforms/main/templates/images/sync-submissions-to-google-sheets.png)\n\n**Uses the verified [n8n-nodes-docupletionforms](https://www.npmjs.com/package/n8n-nodes-docupletionforms) node — available on n8n Cloud and self-hosted instances.**\n\n### Who's it for\nTeams using [DocupletionForms](https://docupletionforms.com) who track submissions in a spreadsheet (for reporting, a lightweight CRM, or handoff to non-technical teammates) and want new rows added automatically instead of exporting or copy-pasting.\n\n### How it works\nThe DocupletionForms Trigger fires the *Form Submitted* event on every new submission for a chosen form. Each submission is appended as a new row in a Google Sheet, or an existing row is updated if the sheet has a matching key column.\n\n### How to set up\n1. Add your DocupletionForms API credential and pick the Form to watch.\n2. Add your Google Sheets credential, then choose the spreadsheet and sheet/tab to write to.\n\n### Requirements\n- n8n (Cloud or self-hosted) with `n8n-nodes-docupletionforms` installed — on Cloud, enable it under Settings → Community Nodes; verified nodes are approved for Cloud installs.\n- A DocupletionForms account and API key.\n- A Google account with edit access to the target spreadsheet.\n\n### How to customize\nMap only the answer fields you care about instead of auto-mapping every column, or add a Filter/IF node beforehand to only sync submissions matching certain criteria.",
         "height": 900,
         "width": 640,
         "color": 1
       },
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
-      "position": [-680, -600],
+      "position": [
+        -680,
+        -600
+      ],
       "id": "b3e3a003-0001-4a00-8000-000000000010",
       "name": "Description"
     },
@@ -23,7 +26,10 @@
       },
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
-      "position": [-40, -280],
+      "position": [
+        -40,
+        -280
+      ],
       "id": "b3e3a003-0001-4a00-8000-000000000011",
       "name": "Step 1 Note"
     },
@@ -36,40 +42,71 @@
       },
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
-      "position": [360, -280],
+      "position": [
+        360,
+        -280
+      ],
       "id": "b3e3a003-0001-4a00-8000-000000000012",
       "name": "Step 2 Note"
     },
     {
       "parameters": {
         "event": "formSubmitted",
-        "formId": { "__rl": true, "mode": "list", "value": "" }
+        "formId": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        }
       },
       "type": "n8n-nodes-docupletionforms.docupletionFormsTrigger",
       "typeVersion": 1,
-      "position": [0, 0],
+      "position": [
+        0,
+        0
+      ],
       "id": "b3e3a003-0001-4a00-8000-000000000001",
       "name": "DocupletionForms Trigger"
     },
     {
       "parameters": {
         "operation": "appendOrUpdate",
-        "documentId": { "__rl": true, "mode": "list", "value": "" },
-        "sheetName": { "__rl": true, "mode": "list", "value": "" }
+        "documentId": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        }
       },
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4.7,
-      "position": [400, 0],
+      "position": [
+        400,
+        0
+      ],
       "id": "b3e3a003-0001-4a00-8000-000000000002",
       "name": "Append to Google Sheets"
     }
   ],
   "connections": {
     "DocupletionForms Trigger": {
-      "main": [[{ "node": "Append to Google Sheets", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Append to Google Sheets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "pinData": {},
   "active": false,
-  "settings": { "executionOrder": "v1" }
+  "settings": {
+    "executionOrder": "v1"
+  }
 }
