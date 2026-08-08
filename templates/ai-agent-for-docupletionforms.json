@@ -3,99 +3,105 @@
   "nodes": [
     {
       "parameters": {
-        "content": "## Submit and look up DocupletionForms forms with an AI agent\n\n![Workflow overview](https://raw.githubusercontent.com/alfa-intellitech/n8n-nodes-docupletionforms/main/templates/images/ai-agent-for-docupletionforms.png)\n\n**Uses the verified [n8n-nodes-docupletionforms](https://www.npmjs.com/package/n8n-nodes-docupletionforms) node — available on n8n Cloud and self-hosted instances.**\n\n### Who's it for\nTeams who want to fill out or check [DocupletionForms](https://docupletionforms.com) submissions through a chat interface (a Slack bot, an internal chat widget, or the built-in n8n chat) instead of opening the DocupletionForms app.\n\n### How it works\nA chat message triggers an AI Agent with two DocupletionForms tools attached: one submits a form with field values the agent extracts from the conversation, the other looks up existing submissions for a form. The agent decides which tool to call based on what the user asks for.\n\n### How to set up\n1. Add your OpenAI credential to the Chat Model node.\n2. Add your DocupletionForms credential to both DocupletionForms tool nodes, and pick the Form each one should use.\n\n### Requirements\n- n8n (Cloud or self-hosted) with `n8n-nodes-docupletionforms` installed — on Cloud, enable it under Settings → Community Nodes; verified nodes are approved for Cloud installs.\n- A DocupletionForms account and API key.\n- An OpenAI API key (or swap in any other n8n Chat Model node).\n\n### How to customize\nAttach more DocupletionForms tool instances (Generate Prefilled Link, List Document Sets, Download Merged Document) the same way — add the node under the agent's Tool port and pick the Resource/Operation you want to expose.",
-        "height": 880,
-        "width": 660,
-        "color": 1
+        "content": "## Submit and look up DocupletionForms forms with an AI agent\n\n### How it works\n\nThis workflow starts from an incoming chat message and sends the user’s request to an AI Agent. The agent uses an OpenAI chat model to decide whether to submit a DocupletionForms form or look up existing submissions, then invokes the appropriate DocupletionForms tool.\n\n### Setup steps\n\n- Configure the chat trigger so users can send messages to the workflow.\n- Add valid OpenAI credentials for the OpenAI Chat Model node and select the desired model.\n- Add DocupletionForms credentials to both DocupletionForms tool nodes.\n- Configure the target form IDs and any required field mappings or tool descriptions so the AI agent can call the tools correctly.\n\n### Customization\n\nYou can adjust the AI Agent instructions, OpenAI model, and DocupletionForms tool settings to control which forms are available and how users should phrase submission or lookup requests.",
+        "width": 480,
+        "height": 768
       },
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        -700,
-        -600
+        -608,
+        -176
       ],
-      "id": "b5e5a005-0001-4a00-8000-000000000010",
-      "name": "Description"
+      "id": "f7959be8-6387-4e3e-9421-3fa70f749be7",
+      "name": "Sticky Note"
     },
     {
       "parameters": {
-        "content": "### Step 1\nSet up your OpenAI credential here (or swap in a different Chat Model node).",
-        "height": 160,
-        "width": 300,
+        "content": "## Receive chat request\n\nStarts the workflow when a user sends a chat message, passing the request into the AI agent.",
+        "width": 240,
+        "height": 336,
         "color": 7
       },
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        0,
-        260
+        -48,
+        -176
       ],
-      "id": "b5e5a005-0001-4a00-8000-000000000011",
-      "name": "Step 1 Note"
+      "id": "7d554ef8-331f-43b0-a9ba-25250a1beee4",
+      "name": "Sticky Note1"
     },
     {
       "parameters": {
-        "content": "### Step 2\nSet up your DocupletionForms credential on each tool node below and pick the Form it should use.",
-        "height": 160,
-        "width": 400,
+        "content": "## AI form assistant\n\nUses an OpenAI chat model inside the AI Agent to interpret the user’s request and call DocupletionForms tools to submit a form or list submissions for a form.",
+        "width": 576,
+        "height": 704,
         "color": 7
       },
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        640,
-        200
+        352,
+        -160
       ],
-      "id": "b5e5a005-0001-4a00-8000-000000000012",
-      "name": "Step 2 Note"
+      "id": "3cbeb05b-971a-4771-8d6c-99495a9ed0a7",
+      "name": "Sticky Note2"
     },
     {
-      "parameters": {
-        "options": {}
-      },
+      "id": "b5e5a005-0001-4a00-8000-000000000001",
+      "name": "When Chat Received",
       "type": "@n8n/n8n-nodes-langchain.chatTrigger",
-      "typeVersion": 1.4,
       "position": [
         0,
         0
       ],
-      "id": "b5e5a005-0001-4a00-8000-000000000001",
-      "name": "When chat message received",
-      "webhookId": "b5e5a005-0001-4a00-8000-000000000099"
-    },
-    {
+      "webhookId": "b5e5a005-0001-4a00-8000-000000000099",
       "parameters": {
         "options": {}
       },
+      "typeVersion": 1.4
+    },
+    {
+      "id": "b5e5a005-0001-4a00-8000-000000000002",
+      "name": "Form Handling Agent",
       "type": "@n8n/n8n-nodes-langchain.agent",
-      "typeVersion": 3.1,
       "position": [
         400,
         0
       ],
-      "id": "b5e5a005-0001-4a00-8000-000000000002",
-      "name": "AI Agent"
+      "parameters": {
+        "options": {}
+      },
+      "typeVersion": 3.1
     },
     {
+      "id": "b5e5a005-0001-4a00-8000-000000000003",
+      "name": "OpenAI GPT-5 Mini",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "position": [
+        400,
+        240
+      ],
       "parameters": {
         "model": {
           "__rl": true,
           "mode": "list",
           "value": "gpt-5-mini"
         },
-        "builtInTools": {},
-        "options": {}
+        "options": {},
+        "builtInTools": {}
       },
-      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
-      "typeVersion": 1.3,
-      "position": [
-        400,
-        240
-      ],
-      "id": "b5e5a005-0001-4a00-8000-000000000003",
-      "name": "OpenAI Chat Model"
+      "typeVersion": 1.3
     },
     {
+      "id": "b5e5a005-0001-4a00-8000-000000000004",
+      "name": "Submit Form for Edit Link",
+      "type": "n8n-nodes-docupletionforms.docupletionFormsTool",
+      "position": [
+        640,
+        400
+      ],
       "parameters": {
         "formId": {
           "__rl": true,
@@ -104,83 +110,76 @@
         },
         "additionalOptions": {}
       },
-      "type": "n8n-nodes-docupletionforms.docupletionFormsTool",
-      "typeVersion": 1,
-      "position": [
-        640,
-        400
-      ],
-      "id": "b5e5a005-0001-4a00-8000-000000000004",
-      "name": "Submit a form and get a link to edit it later in DocupletionForms"
+      "typeVersion": 1
     },
     {
-      "parameters": {
-        "operation": "listSubmissions",
-        "formId": {
-          "__rl": true,
-          "mode": "list",
-          "value": ""
-        }
-      },
+      "id": "b5e5a005-0001-4a00-8000-000000000005",
+      "name": "Fetch Form Submissions",
       "type": "n8n-nodes-docupletionforms.docupletionFormsTool",
-      "typeVersion": 1,
       "position": [
         800,
         400
       ],
-      "id": "b5e5a005-0001-4a00-8000-000000000005",
-      "name": "List submissions for a form in DocupletionForms"
+      "parameters": {
+        "formId": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "operation": "listSubmissions"
+      },
+      "typeVersion": 1
     }
   ],
+  "active": false,
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
   "connections": {
-    "When chat message received": {
-      "main": [
-        [
-          {
-            "node": "AI Agent",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "OpenAI Chat Model": {
+    "OpenAI GPT-5 Mini": {
       "ai_languageModel": [
         [
           {
-            "node": "AI Agent",
+            "node": "Form Handling Agent",
             "type": "ai_languageModel",
             "index": 0
           }
         ]
       ]
     },
-    "Submit a form and get a link to edit it later in DocupletionForms": {
+    "When Chat Received": {
+      "main": [
+        [
+          {
+            "node": "Form Handling Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Form Submissions": {
       "ai_tool": [
         [
           {
-            "node": "AI Agent",
+            "node": "Form Handling Agent",
             "type": "ai_tool",
             "index": 0
           }
         ]
       ]
     },
-    "List submissions for a form in DocupletionForms": {
+    "Submit Form for Edit Link": {
       "ai_tool": [
         [
           {
-            "node": "AI Agent",
+            "node": "Form Handling Agent",
             "type": "ai_tool",
             "index": 0
           }
         ]
       ]
     }
-  },
-  "pinData": {},
-  "active": false,
-  "settings": {
-    "executionOrder": "v1"
   }
 }
