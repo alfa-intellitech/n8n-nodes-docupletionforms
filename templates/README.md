@@ -26,11 +26,6 @@ All templates were built and verified against a real n8n instance with this
 package installed from npm via Community Nodes — each imports cleanly with no
 "unrecognized node" errors; the only warnings you'll see after import are the
 intentionally-empty Form/Document Set/credential fields described above.
-`ai-document-intelligence-assistant.json` is schema-validated (structurally
-self-consistent, all node/connection references resolve) but not yet
-confirmed by a live import — the disposable local test instance used for
-that step currently has no outbound network path to GitHub's CDN, unrelated
-to the file itself.
 
 ## Creator Portal submission
 
