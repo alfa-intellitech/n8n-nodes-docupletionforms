@@ -1,11 +1,11 @@
 {
-  "name": "Submit and look up DocupletionForms forms with an AI agent",
+  "name": "Submit and look up DocupletionForms forms with OpenAI chat agents",
   "nodes": [
     {
       "parameters": {
-        "content": "## Submit and look up DocupletionForms forms with an AI agent\n\n### How it works\n\nThis workflow starts from an incoming chat message and sends the user’s request to an AI Agent. The agent uses an OpenAI chat model to decide whether to submit a DocupletionForms form or look up existing submissions, then invokes the appropriate DocupletionForms tool.\n\n### Setup steps\n\n- Configure the chat trigger so users can send messages to the workflow.\n- Add valid OpenAI credentials for the OpenAI Chat Model node and select the desired model.\n- Add DocupletionForms credentials to both DocupletionForms tool nodes.\n- Configure the target form IDs and any required field mappings or tool descriptions so the AI agent can call the tools correctly.\n\n### Customization\n\nYou can adjust the AI Agent instructions, OpenAI model, and DocupletionForms tool settings to control which forms are available and how users should phrase submission or lookup requests.",
-        "width": 480,
-        "height": 768
+        "content": "## Submit and look up DocupletionForms forms with OpenAI chat agents\n\n### Quick overview\nThis workflow uses an n8n chat trigger, an OpenAI chat model, and DocupletionForms tools so users can submit DocupletionForms form entries or look up existing submissions directly through a chat conversation.\n\n### How it works\n1. Receives an incoming message from the n8n chat trigger.\n2. Uses an AI agent powered by the OpenAI chat model to interpret the user's request and extract any needed form details.\n3. When the user asks to create a new entry, submits a DocupletionForms form with the extracted field values and returns an edit link.\n4. When the user asks to review existing entries, lists submissions for the selected DocupletionForms form and returns the results in chat.\n\n### Setup\n1. Add an OpenAI API credential to the OpenAI Chat Model node (or replace it with another supported n8n chat model).\n2. Install and enable the community node package `n8n-nodes-docupletionforms` in your n8n instance.\n3. Add your DocupletionForms API credentials to both DocupletionForms tool nodes.\n4. Select the target DocupletionForms Form ID in each tool node (submit vs. list submissions) to match the form you want to manage via chat.\n\n### Requirements\n- n8n (Cloud or self-hosted) with `n8n-nodes-docupletionforms` installed\n- A DocupletionForms account and API key\n- An OpenAI API key (or another supported n8n Chat Model)\n\n### Customization\n- Attach more DocupletionForms tool instances (Generate Prefilled Link, List Document Sets, Download Merged Document) to expose more capabilities to the agent",
+        "width": 560,
+        "height": 1080
       },
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
