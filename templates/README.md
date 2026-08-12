@@ -20,11 +20,17 @@ imported you'll see them right there too.
 | [`sync-submissions-to-google-sheets.json`](sync-submissions-to-google-sheets.json) — *Sync DocupletionForms submissions to Google Sheets* | Fires on every new submission and appends (or updates, matched by row) a row in a Google Sheet — an event-driven alternative to polling with *List Submissions*. |
 | [`bulk-export-merged-documents.json`](bulk-export-merged-documents.json) — *Export all merged documents from a DocupletionForms document set* | Manually triggered: lists every merged document for a document set, then downloads each one as binary data — useful for an end-of-period export run. |
 | [`ai-agent-for-docupletionforms.json`](ai-agent-for-docupletionforms.json) — *Submit and look up DocupletionForms forms with OpenAI chat agents* | A chat-driven AI Agent with two DocupletionForms tools attached (*Submit Form*, *List Submissions*) so it can fill out a form or look up existing submissions from natural-language requests. Add more tool instances the same way (drag another DocupletionForms node onto the agent's Tool port, pick a different Resource/Operation) to expose more capabilities. |
+| [`ai-document-intelligence-assistant.json`](ai-document-intelligence-assistant.json) — *Summarize merged DocupletionForms PDFs with AI and chat to ask questions later* | Fires on *Document Merged*, extracts the PDF's text, and uses an LLM chain with a structured output parser to summarize it and pull out a category and key points. The summary posts to Slack and logs to a Notion database while the original PDF archives to Google Drive; the extracted text is also indexed into a vector store so a second, chat-triggered agent can answer follow-up questions about any document processed this way. |
 
 All templates were built and verified against a real n8n instance with this
 package installed from npm via Community Nodes — each imports cleanly with no
 "unrecognized node" errors; the only warnings you'll see after import are the
 intentionally-empty Form/Document Set/credential fields described above.
+`ai-document-intelligence-assistant.json` is schema-validated (structurally
+self-consistent, all node/connection references resolve) but not yet
+confirmed by a live import — the disposable local test instance used for
+that step currently has no outbound network path to GitHub's CDN, unrelated
+to the file itself.
 
 ## Creator Portal submission
 
