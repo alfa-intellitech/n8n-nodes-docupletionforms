@@ -4,7 +4,7 @@
     {
       "parameters": {
         "content": "## AI Document Intelligence for DocupletionForms\n\n![Workflow overview](https://raw.githubusercontent.com/alfa-intellitech/n8n-nodes-docupletionforms/main/templates/images/ai-document-intelligence-assistant.png)\n\n**Uses the verified [n8n-nodes-docupletionforms](https://www.npmjs.com/package/n8n-nodes-docupletionforms) node — available on n8n Cloud and self-hosted instances.**\n\nAutomatically summarizes every [DocupletionForms](https://docupletionforms.com) document the moment it's merged, routes that summary to Slack and Notion, archives the PDF to Google Drive, and lets your team ask follow-up questions about any document later through chat.\n\n### How it works\nThe DocupletionForms Trigger fires on *Document Merged*. The PDF is downloaded and its text extracted, then an LLM chain summarizes it into a category, summary, and key points. The summary posts to Slack and Notion while the PDF archives to Drive. The extracted text is also indexed into a vector store, so a second, chat-triggered agent can answer questions about any document processed this way.\n\n### Setup\n1. Add your DocupletionForms credential and pick the Document Set to watch.\n2. Add your OpenAI credential to all four OpenAI nodes (2 Chat Models, 2 Embeddings).\n3. Add your Slack, Notion, and Google Drive credentials for the fan-out branches.\n4. Open the chat panel on \"Ask About Documents\" to test Q&A once a document has been processed.\n\n### Customization tips\nSwap the in-memory vector store for Pinecone, Supabase, or Qdrant for production use — it only persists while this instance keeps running. Drop or add fan-out branches as needed.",
-        "height": 900,
+        "height": 1300,
         "width": 660,
         "color": 1
       },
@@ -36,7 +36,7 @@
     {
       "parameters": {
         "content": "## Index for Q&A\nChunks the text and embeds it into a searchable vector store for the chat agent below.",
-        "height": 340,
+        "height": 420,
         "width": 520,
         "color": 7
       },
