@@ -3,8 +3,8 @@
   "nodes": [
     {
       "parameters": {
-        "content": "## AI Document Intelligence for DocupletionForms\n\n![Workflow overview](https://raw.githubusercontent.com/alfa-intellitech/n8n-nodes-docupletionforms/main/templates/images/ai-document-intelligence-assistant.png)\n\n**Uses the verified [n8n-nodes-docupletionforms](https://www.npmjs.com/package/n8n-nodes-docupletionforms) node — available on n8n Cloud and self-hosted instances.**\n\n### Who's it for\nTeams using [DocupletionForms](https://docupletionforms.com) who generate a lot of merged documents (contracts, intake packets, filings) and want an AI layer on top: an automatic summary the moment a document is ready, that summary routed to the tools the team already works in, and the ability to ask questions about any past document later without opening the PDF.\n\n### How it works\nThe DocupletionForms Trigger fires the *Document Merged* event whenever a submission is merged into a PDF for a chosen document set. The PDF is downloaded, its text extracted, and an AI chain summarizes it and pulls out a category and key points as structured data. The summary is posted to Slack, logged as a new page in a Notion database, and the original PDF is archived to Google Drive — all in the same run. The extracted text is also stored in a vector index, so a second, chat-triggered AI agent can answer natural-language questions about any document processed this way (\"what was the settlement amount on the Smith filing?\").\n\n### How to set up\n1. Add your DocupletionForms API credential and pick the Document Set to watch on the trigger.\n2. Add your OpenAI credential to both OpenAI Chat Model nodes and both Embeddings nodes (four total).\n3. Add your Slack credential and channel, your Notion credential and database (with matching \"Category\" and \"Summary\" text properties), and your Google Drive credential/folder.\n4. Optional: open the chat panel on \"Ask About Documents\" to test Q&A once at least one document has been processed.\n\n### Requirements\n- n8n (Cloud or self-hosted) with `n8n-nodes-docupletionforms` installed — on Cloud, enable it under Settings → Community Nodes; verified nodes are approved for Cloud installs.\n- A DocupletionForms account and API key.\n- An OpenAI API key (or swap in another supported n8n Chat Model / Embeddings provider).\n- Slack, Notion, and Google Drive accounts connected via their respective credentials.\n\n### How to customize\nThe in-memory vector store is the simplest way to try this out, but it only persists while your n8n instance keeps running and isn't shared across multiple workers — swap both \"Vector Store\" nodes for Pinecone, Supabase, or Qdrant for anything production-grade. Drop any of the three fan-out branches (Slack/Notion/Drive) you don't need, or add more — the summarized output is just JSON (`summary`, `category`, `key_points`) that any node can consume.",
-        "height": 1160,
+        "content": "## AI Document Intelligence for DocupletionForms\n\n![Workflow overview](https://raw.githubusercontent.com/alfa-intellitech/n8n-nodes-docupletionforms/main/templates/images/ai-document-intelligence-assistant.png)\n\n**Uses the verified [n8n-nodes-docupletionforms](https://www.npmjs.com/package/n8n-nodes-docupletionforms) node — available on n8n Cloud and self-hosted instances.**\n\nAutomatically summarizes every [DocupletionForms](https://docupletionforms.com) document the moment it's merged, routes that summary to Slack and Notion, archives the PDF to Google Drive, and lets your team ask follow-up questions about any document later through chat.\n\n### How it works\nThe DocupletionForms Trigger fires on *Document Merged*. The PDF is downloaded and its text extracted, then an LLM chain summarizes it into a category, summary, and key points. The summary posts to Slack and Notion while the PDF archives to Drive. The extracted text is also indexed into a vector store, so a second, chat-triggered agent can answer questions about any document processed this way.\n\n### Setup\n1. Add your DocupletionForms credential and pick the Document Set to watch.\n2. Add your OpenAI credential to all four OpenAI nodes (2 Chat Models, 2 Embeddings).\n3. Add your Slack, Notion, and Google Drive credentials for the fan-out branches.\n4. Open the chat panel on \"Ask About Documents\" to test Q&A once a document has been processed.\n\n### Customization tips\nSwap the in-memory vector store for Pinecone, Supabase, or Qdrant for production use — it only persists while this instance keeps running. Drop or add fan-out branches as needed.",
+        "height": 900,
         "width": 660,
         "color": 1
       },
@@ -12,74 +12,106 @@
       "typeVersion": 1,
       "position": [
         -680,
-        -900
+        -640
       ],
-      "id": "b7e7a007-0001-4a00-8000-000000000010",
+      "id": "b7e7a007-0002-4a00-8000-000000000001",
       "name": "Description"
     },
     {
       "parameters": {
-        "content": "### Step 1\nSet up your DocupletionForms credential and pick the Document Set to watch.",
-        "height": 160,
-        "width": 320,
+        "content": "## Get the document\nDownloads the merged PDF and extracts its text for the AI to read.",
+        "height": 260,
+        "width": 700,
         "color": 7
       },
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
         -40,
-        -560
+        -140
       ],
-      "id": "b7e7a007-0001-4a00-8000-000000000011",
-      "name": "Step 1 Note"
+      "id": "b7e7a007-0002-4a00-8000-000000000002",
+      "name": "Get the document"
     },
     {
       "parameters": {
-        "content": "### Step 2\nAdd your OpenAI credential to all four OpenAI nodes (2 Chat Models + 2 Embeddings).",
-        "height": 160,
-        "width": 320,
+        "content": "## Index for Q&A\nChunks the text and embeds it into a searchable vector store for the chat agent below.",
+        "height": 340,
+        "width": 520,
         "color": 7
       },
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        360,
-        -560
+        600,
+        -540
       ],
-      "id": "b7e7a007-0001-4a00-8000-000000000012",
-      "name": "Step 2 Note"
+      "id": "b7e7a007-0002-4a00-8000-000000000003",
+      "name": "Index for Q&A"
     },
     {
       "parameters": {
-        "content": "### Step 3\nSet up Slack, Notion, and Google Drive credentials for the fan-out branches.",
-        "height": 160,
-        "width": 320,
+        "content": "## Summarize with AI\nAn LLM chain turns the raw text into a structured summary, category, and key points.",
+        "height": 400,
+        "width": 340,
         "color": 7
       },
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        1120,
-        -320
+        820,
+        -40
       ],
-      "id": "b7e7a007-0001-4a00-8000-000000000013",
-      "name": "Step 3 Note"
+      "id": "b7e7a007-0002-4a00-8000-000000000004",
+      "name": "Summarize with AI"
     },
     {
       "parameters": {
-        "content": "### Step 4\nOpen chat here to ask questions about any document that's been processed.",
-        "height": 160,
-        "width": 320,
+        "content": "## Route the summary\nPosts the summary to Slack and logs it as a new page in Notion.",
+        "height": 440,
+        "width": 240,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1200,
+        -200
+      ],
+      "id": "b7e7a007-0002-4a00-8000-000000000005",
+      "name": "Route the summary"
+    },
+    {
+      "parameters": {
+        "content": "## Archive the original\nSaves the source PDF to Google Drive.",
+        "height": 140,
+        "width": 200,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        480,
+        260
+      ],
+      "id": "b7e7a007-0002-4a00-8000-000000000006",
+      "name": "Archive the original"
+    },
+    {
+      "parameters": {
+        "content": "## Ask questions later\nA second, chat-triggered agent searches the vector index to answer questions about any document processed above.",
+        "height": 640,
+        "width": 820,
         "color": 7
       },
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
         -40,
-        620
+        700
       ],
-      "id": "b7e7a007-0001-4a00-8000-000000000014",
-      "name": "Step 4 Note"
+      "id": "b7e7a007-0002-4a00-8000-000000000007",
+      "name": "Ask questions later"
     },
     {
       "parameters": {
